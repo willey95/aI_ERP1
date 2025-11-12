@@ -1,0 +1,645 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>XEM - 사업비 집행 관리 시스템</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
+    <style>
+        * {
+            font-family: 'Inter', sans-serif;
+        }
+        
+        /* Custom Scrollbar */
+        ::-webkit-scrollbar {
+            width: 8px;
+            height: 8px;
+        }
+        
+        ::-webkit-scrollbar-track {
+            background: #f1f1f1;
+        }
+        
+        ::-webkit-scrollbar-thumb {
+            background: #888;
+            border-radius: 4px;
+        }
+        
+        ::-webkit-scrollbar-thumb:hover {
+            background: #555;
+        }
+
+        /* Custom Execution Rate Colors */
+        .execution-low { color: #10B981; }
+        .execution-medium { color: #F59E0B; }
+        .execution-high { color: #FB923C; }
+        .execution-critical { color: #EF4444; }
+        .execution-over { color: #991B1B; }
+
+        .bg-execution-low { background-color: #10B981; }
+        .bg-execution-medium { background-color: #F59E0B; }
+        .bg-execution-high { background-color: #FB923C; }
+        .bg-execution-critical { background-color: #EF4444; }
+        .bg-execution-over { background-color: #991B1B; }
+
+        /* Animation */
+        @keyframes fadeIn {
+            from { opacity: 0; transform: translateY(10px); }
+            to { opacity: 1; transform: translateY(0); }
+        }
+
+        .fade-in {
+            animation: fadeIn 0.3s ease-out;
+        }
+
+        /* Modal Overlay */
+        .modal-overlay {
+            background-color: rgba(0, 0, 0, 0.5);
+            backdrop-filter: blur(4px);
+        }
+
+        /* Card Hover Effect */
+        .project-card {
+            transition: all 0.3s ease;
+        }
+
+        .project-card:hover {
+            transform: translateY(-4px);
+            box-shadow: 0 20px 25px -5px rgba(0, 0, 0, 0.1), 0 10px 10px -5px rgba(0, 0, 0, 0.04);
+        }
+
+        /* Progress Bar Animation */
+        .progress-bar {
+            transition: width 0.5s ease;
+        }
+
+        /* Status Badge */
+        .badge {
+            padding: 4px 12px;
+            border-radius: 9999px;
+            font-size: 12px;
+            font-weight: 600;
+        }
+
+        /* Table Hover */
+        tbody tr:hover {
+            background-color: #f9fafb;
+        }
+    </style>
+</head>
+<body class="bg-gray-50 min-h-screen">
+    <!-- Navigation Bar -->
+    <nav class="bg-white border-b border-gray-200 sticky top-0 z-50">
+        <div class="container mx-auto px-6">
+            <div class="flex items-center justify-between h-16">
+                <!-- Logo -->
+                <div class="flex items-center space-x-3">
+                    <svg class="w-8 h-8 text-blue-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 21V5a2 2 0 00-2-2H7a2 2 0 00-2 2v16m14 0h2m-2 0h-5m-9 0H3m2 0h5M9 7h1m-1 4h1m4-4h1m-1 4h1m-5 10v-5a1 1 0 011-1h2a1 1 0 011 1v5m-4 0h4" />
+                    </svg>
+                    <span class="text-xl font-bold text-gray-900">XEM</span>
+                    <span class="text-sm text-gray-500">사업비 집행 관리</span>
+                </div>
+
+                <!-- Navigation Links -->
+                <div class="hidden md:flex items-center space-x-8">
+                    <a href="#" class="text-blue-600 font-semibold border-b-2 border-blue-600 pb-4">프로젝트</a>
+                    <a href="#" class="text-gray-600 hover:text-gray-900 pb-4">대시보드</a>
+                    <a href="#" class="text-gray-600 hover:text-gray-900 pb-4">품의관리</a>
+                    <a href="#" class="text-gray-600 hover:text-gray-900 pb-4">분석</a>
+                    <a href="#" class="text-gray-600 hover:text-gray-900 pb-4">설정</a>
+                </div>
+
+                <!-- User Menu -->
+                <div class="flex items-center space-x-4">
+                    <!-- Notifications -->
+                    <button class="relative p-2 text-gray-600 hover:text-gray-900 rounded-full hover:bg-gray-100">
+                        <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 17h5l-1.405-1.405A2.032 2.032 0 0118 14.158V11a6.002 6.002 0 00-4-5.659V5a2 2 0 10-4 0v.341C7.67 6.165 6 8.388 6 11v3.159c0 .538-.214 1.055-.595 1.436L4 17h5m6 0v1a3 3 0 11-6 0v-1m6 0H9" />
+                        </svg>
+                        <span class="absolute top-1 right-1 w-2 h-2 bg-red-500 rounded-full"></span>
+                    </button>
+
+                    <!-- User Avatar -->
+                    <div class="flex items-center space-x-3 cursor-pointer">
+                        <div class="w-10 h-10 rounded-full bg-blue-600 flex items-center justify-center text-white font-semibold">
+                            김
+                        </div>
+                        <div class="hidden md:block">
+                            <p class="text-sm font-semibold text-gray-900">김철수</p>
+                            <p class="text-xs text-gray-500">CFO</p>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </nav>
+
+    <!-- Main Content -->
+    <main class="container mx-auto px-6 py-8">
+        <!-- Page Header -->
+        <div class="flex items-center justify-between mb-8">
+            <div>
+                <h1 class="text-3xl font-bold text-gray-900">프로젝트 관리</h1>
+                <p class="text-gray-600 mt-2">사업비 집행 현황을 한눈에 확인하세요</p>
+            </div>
+            <button class="flex items-center space-x-2 bg-blue-600 text-white px-6 py-3 rounded-lg hover:bg-blue-700 transition-colors shadow-md">
+                <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 4v16m8-8H4" />
+                </svg>
+                <span class="font-semibold">신규 프로젝트</span>
+            </button>
+        </div>
+
+        <!-- Filters & Search -->
+        <div class="bg-white rounded-xl border border-gray-200 p-6 mb-8 shadow-sm">
+            <div class="flex flex-col md:flex-row gap-4">
+                <!-- Search -->
+                <div class="flex-1 relative">
+                    <svg class="absolute left-4 top-1/2 transform -translate-y-1/2 w-5 h-5 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z" />
+                    </svg>
+                    <input 
+                        type="text" 
+                        placeholder="프로젝트 검색..." 
+                        class="w-full pl-12 pr-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                    />
+                </div>
+
+                <!-- Status Filter -->
+                <select class="px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent">
+                    <option>전체 상태</option>
+                    <option>계획</option>
+                    <option>진행중</option>
+                    <option>완료</option>
+                    <option>중단</option>
+                </select>
+
+                <!-- Type Filter -->
+                <select class="px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent">
+                    <option>전체 유형</option>
+                    <option>자체사업</option>
+                    <option>SPC</option>
+                    <option>조합</option>
+                </select>
+
+                <!-- Sort -->
+                <select class="px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent">
+                    <option>최근 순</option>
+                    <option>이름 순</option>
+                    <option>예산 순</option>
+                    <option>리스크 순</option>
+                </select>
+            </div>
+        </div>
+
+        <!-- Project Grid -->
+        <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+            <!-- Project Card 1 -->
+            <div class="project-card bg-white rounded-xl border border-gray-200 shadow-sm cursor-pointer overflow-hidden" onclick="openDashboard()">
+                <div class="p-6">
+                    <!-- Card Header -->
+                    <div class="flex items-start justify-between mb-4">
+                        <div>
+                            <h3 class="text-xl font-bold text-gray-900 mb-1">강남 센트럴 오피스텔</h3>
+                            <p class="text-sm text-gray-500">서울시 강남구 역삼동</p>
+                        </div>
+                        <span class="badge bg-red-100 text-red-700">Risk: 78</span>
+                    </div>
+
+                    <!-- Stats Grid -->
+                    <div class="space-y-3 mb-4">
+                        <div class="flex items-center justify-between text-sm">
+                            <span class="text-gray-600">총 예산</span>
+                            <span class="text-lg font-bold text-gray-900">₩500억</span>
+                        </div>
+                        <div class="flex items-center justify-between text-sm">
+                            <span class="text-gray-600">집행액</span>
+                            <span class="font-semibold text-blue-600">₩320억</span>
+                        </div>
+                        <div class="flex items-center justify-between text-sm">
+                            <span class="text-gray-600">잔액</span>
+                            <span class="font-semibold text-gray-900">₩180억</span>
+                        </div>
+                    </div>
+
+                    <!-- Progress Bar -->
+                    <div class="mb-4">
+                        <div class="flex items-center justify-between text-sm mb-2">
+                            <span class="text-gray-600">집행률</span>
+                            <span class="font-bold execution-medium">64.0%</span>
+                        </div>
+                        <div class="w-full bg-gray-200 rounded-full h-2.5">
+                            <div class="bg-execution-medium h-2.5 rounded-full progress-bar" style="width: 64%"></div>
+                        </div>
+                    </div>
+
+                    <!-- Footer -->
+                    <div class="flex items-center justify-between pt-4 border-t border-gray-100">
+                        <div class="flex items-center text-sm text-gray-600">
+                            <svg class="w-4 h-4 mr-1" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 7h8m0 0v8m0-8l-8 8-4-4-6 6" />
+                            </svg>
+                            <span>목표 ROI: 15.5%</span>
+                        </div>
+                        <div class="flex items-center text-sm text-gray-600">
+                            <svg class="w-4 h-4 mr-1" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 21V5a2 2 0 00-2-2H7a2 2 0 00-2 2v16m14 0h2m-2 0h-5m-9 0H3m2 0h5M9 7h1m-1 4h1m4-4h1m-1 4h1m-5 10v-5a1 1 0 011-1h2a1 1 0 011 1v5m-4 0h4" />
+                            </svg>
+                            <span>480세대</span>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Project Card 2 -->
+            <div class="project-card bg-white rounded-xl border border-gray-200 shadow-sm cursor-pointer overflow-hidden">
+                <div class="p-6">
+                    <div class="flex items-start justify-between mb-4">
+                        <div>
+                            <h3 class="text-xl font-bold text-gray-900 mb-1">판교 테크밸리 상가</h3>
+                            <p class="text-sm text-gray-500">경기도 성남시 분당구</p>
+                        </div>
+                        <span class="badge bg-yellow-100 text-yellow-700">Risk: 52</span>
+                    </div>
+
+                    <div class="space-y-3 mb-4">
+                        <div class="flex items-center justify-between text-sm">
+                            <span class="text-gray-600">총 예산</span>
+                            <span class="text-lg font-bold text-gray-900">₩350억</span>
+                        </div>
+                        <div class="flex items-center justify-between text-sm">
+                            <span class="text-gray-600">집행액</span>
+                            <span class="font-semibold text-blue-600">₩140억</span>
+                        </div>
+                        <div class="flex items-center justify-between text-sm">
+                            <span class="text-gray-600">잔액</span>
+                            <span class="font-semibold text-gray-900">₩210억</span>
+                        </div>
+                    </div>
+
+                    <div class="mb-4">
+                        <div class="flex items-center justify-between text-sm mb-2">
+                            <span class="text-gray-600">집행률</span>
+                            <span class="font-bold execution-low">40.0%</span>
+                        </div>
+                        <div class="w-full bg-gray-200 rounded-full h-2.5">
+                            <div class="bg-execution-low h-2.5 rounded-full progress-bar" style="width: 40%"></div>
+                        </div>
+                    </div>
+
+                    <div class="flex items-center justify-between pt-4 border-t border-gray-100">
+                        <div class="flex items-center text-sm text-gray-600">
+                            <svg class="w-4 h-4 mr-1" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 7h8m0 0v8m0-8l-8 8-4-4-6 6" />
+                            </svg>
+                            <span>목표 ROI: 18.2%</span>
+                        </div>
+                        <div class="flex items-center text-sm text-gray-600">
+                            <svg class="w-4 h-4 mr-1" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 21V5a2 2 0 00-2-2H7a2 2 0 00-2 2v16m14 0h2m-2 0h-5m-9 0H3m2 0h5M9 7h1m-1 4h1m4-4h1m-1 4h1m-5 10v-5a1 1 0 011-1h2a1 1 0 011 1v5m-4 0h4" />
+                            </svg>
+                            <span>120호</span>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Project Card 3 -->
+            <div class="project-card bg-white rounded-xl border border-gray-200 shadow-sm cursor-pointer overflow-hidden">
+                <div class="p-6">
+                    <div class="flex items-start justify-between mb-4">
+                        <div>
+                            <h3 class="text-xl font-bold text-gray-900 mb-1">송도 더샵 센트럴시티</h3>
+                            <p class="text-sm text-gray-500">인천시 연수구 송도동</p>
+                        </div>
+                        <span class="badge bg-orange-100 text-orange-700">Risk: 85</span>
+                    </div>
+
+                    <div class="space-y-3 mb-4">
+                        <div class="flex items-center justify-between text-sm">
+                            <span class="text-gray-600">총 예산</span>
+                            <span class="text-lg font-bold text-gray-900">₩800억</span>
+                        </div>
+                        <div class="flex items-center justify-between text-sm">
+                            <span class="text-gray-600">집행액</span>
+                            <span class="font-semibold text-blue-600">₩720억</span>
+                        </div>
+                        <div class="flex items-center justify-between text-sm">
+                            <span class="text-gray-600">잔액</span>
+                            <span class="font-semibold text-gray-900">₩80억</span>
+                        </div>
+                    </div>
+
+                    <div class="mb-4">
+                        <div class="flex items-center justify-between text-sm mb-2">
+                            <span class="text-gray-600">집행률</span>
+                            <span class="font-bold execution-critical">90.0%</span>
+                        </div>
+                        <div class="w-full bg-gray-200 rounded-full h-2.5">
+                            <div class="bg-execution-critical h-2.5 rounded-full progress-bar" style="width: 90%"></div>
+                        </div>
+                    </div>
+
+                    <div class="flex items-center justify-between pt-4 border-t border-gray-100">
+                        <div class="flex items-center text-sm text-gray-600">
+                            <svg class="w-4 h-4 mr-1" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 7h8m0 0v8m0-8l-8 8-4-4-6 6" />
+                            </svg>
+                            <span>목표 ROI: 12.8%</span>
+                        </div>
+                        <div class="flex items-center text-sm text-gray-600">
+                            <svg class="w-4 h-4 mr-1" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 21V5a2 2 0 00-2-2H7a2 2 0 00-2 2v16m14 0h2m-2 0h-5m-9 0H3m2 0h5M9 7h1m-1 4h1m4-4h1m-1 4h1m-5 10v-5a1 1 0 011-1h2a1 1 0 011 1v5m-4 0h4" />
+                            </svg>
+                            <span>650세대</span>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </main>
+
+    <!-- Dashboard Modal (Hidden by default) -->
+    <div id="dashboardModal" class="hidden fixed inset-0 z-50 overflow-y-auto">
+        <!-- Overlay -->
+        <div class="modal-overlay fixed inset-0" onclick="closeDashboard()"></div>
+        
+        <!-- Modal Content -->
+        <div class="flex min-h-screen items-center justify-center p-4">
+            <div class="relative bg-white rounded-2xl shadow-2xl w-full max-w-7xl max-h-[90vh] flex flex-col fade-in">
+                <!-- Modal Header -->
+                <div class="flex items-center justify-between p-8 border-b border-gray-200">
+                    <div>
+                        <h2 class="text-2xl font-bold text-gray-900">강남 센트럴 오피스텔 - 사업비 관리 현황</h2>
+                        <p class="text-sm text-gray-500 mt-1">서울시 강남구 역삼동 · 480세대</p>
+                    </div>
+                    <div class="flex items-center space-x-3">
+                        <button class="flex items-center space-x-2 px-4 py-2 text-gray-700 bg-gray-100 rounded-lg hover:bg-gray-200 transition-colors">
+                            <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M10.325 4.317c.426-1.756 2.924-1.756 3.35 0a1.724 1.724 0 002.573 1.066c1.543-.94 3.31.826 2.37 2.37a1.724 1.724 0 001.065 2.572c1.756.426 1.756 2.924 0 3.35a1.724 1.724 0 00-1.066 2.573c.94 1.543-.826 3.31-2.37 2.37a1.724 1.724 0 00-2.572 1.065c-.426 1.756-2.924 1.756-3.35 0a1.724 1.724 0 00-2.573-1.066c-1.543.94-3.31-.826-2.37-2.37a1.724 1.724 0 00-1.065-2.572c-1.756-.426-1.756-2.924 0-3.35a1.724 1.724 0 001.066-2.573c-.94-1.543.826-3.31 2.37-2.37.996.608 2.296.07 2.572-1.065z" />
+                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 12a3 3 0 11-6 0 3 3 0 016 0z" />
+                            </svg>
+                            <span class="text-sm font-medium">설정</span>
+                        </button>
+                        <button class="flex items-center space-x-2 px-4 py-2 text-white bg-green-600 rounded-lg hover:bg-green-700 transition-colors">
+                            <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 10v6m0 0l-3-3m3 3l3-3m2 8H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" />
+                            </svg>
+                            <span class="text-sm font-medium">엑셀 다운로드</span>
+                        </button>
+                        <button onclick="closeDashboard()" class="text-gray-400 hover:text-gray-600 transition-colors">
+                            <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12" />
+                            </svg>
+                        </button>
+                    </div>
+                </div>
+
+                <!-- KPI Summary -->
+                <div class="grid grid-cols-4 gap-6 p-8 border-b border-gray-200 bg-gray-50">
+                    <!-- Total Budget -->
+                    <div class="bg-white rounded-xl p-5 border border-gray-200 shadow-sm">
+                        <div class="flex items-center justify-between mb-3">
+                            <span class="text-sm font-medium text-gray-600">총 예산</span>
+                            <div class="w-10 h-10 bg-blue-100 rounded-lg flex items-center justify-center">
+                                <svg class="w-5 h-5 text-blue-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 8c-1.657 0-3 .895-3 2s1.343 2 3 2 3 .895 3 2-1.343 2-3 2m0-8c1.11 0 2.08.402 2.599 1M12 8V7m0 1v8m0 0v1m0-1c-1.11 0-2.08-.402-2.599-1M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
+                                </svg>
+                            </div>
+                        </div>
+                        <p class="text-3xl font-bold text-gray-900">₩500억</p>
+                    </div>
+
+                    <!-- Executed -->
+                    <div class="bg-white rounded-xl p-5 border border-gray-200 shadow-sm">
+                        <div class="flex items-center justify-between mb-3">
+                            <span class="text-sm font-medium text-gray-600">집행액</span>
+                            <div class="w-10 h-10 bg-green-100 rounded-lg flex items-center justify-center">
+                                <svg class="w-5 h-5 text-green-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 7h8m0 0v8m0-8l-8 8-4-4-6 6" />
+                                </svg>
+                            </div>
+                        </div>
+                        <p class="text-3xl font-bold text-gray-900">₩320억</p>
+                        <p class="text-sm text-gray-500 mt-1">64.0% 집행</p>
+                    </div>
+
+                    <!-- Remaining -->
+                    <div class="bg-white rounded-xl p-5 border border-gray-200 shadow-sm">
+                        <div class="flex items-center justify-between mb-3">
+                            <span class="text-sm font-medium text-gray-600">잔액</span>
+                            <div class="w-10 h-10 bg-yellow-100 rounded-lg flex items-center justify-center">
+                                <svg class="w-5 h-5 text-yellow-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" />
+                                </svg>
+                            </div>
+                        </div>
+                        <p class="text-3xl font-bold text-gray-900">₩180억</p>
+                    </div>
+
+                    <!-- Risk Score -->
+                    <div class="bg-white rounded-xl p-5 border border-gray-200 shadow-sm">
+                        <div class="flex items-center justify-between mb-3">
+                            <span class="text-sm font-medium text-gray-600">리스크 스코어</span>
+                            <div class="w-10 h-10 bg-red-100 rounded-lg flex items-center justify-center">
+                                <svg class="w-5 h-5 text-red-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z" />
+                                </svg>
+                            </div>
+                        </div>
+                        <p class="text-3xl font-bold text-gray-900">78/100</p>
+                        <p class="text-sm text-red-600 mt-1 font-medium">높음</p>
+                    </div>
+                </div>
+
+                <!-- Tabs -->
+                <div class="flex-1 overflow-y-auto">
+                    <div class="border-b border-gray-200 px-8">
+                        <div class="flex space-x-8">
+                            <button class="py-4 px-1 border-b-2 border-blue-600 text-blue-600 font-semibold text-sm">
+                                사업수지
+                            </button>
+                            <button class="py-4 px-1 border-b-2 border-transparent text-gray-500 hover:text-gray-700 font-medium text-sm">
+                                현금흐름
+                            </button>
+                            <button class="py-4 px-1 border-b-2 border-transparent text-gray-500 hover:text-gray-700 font-medium text-sm">
+                                집행실적
+                            </button>
+                            <button class="py-4 px-1 border-b-2 border-transparent text-gray-500 hover:text-gray-700 font-medium text-sm">
+                                시뮬레이션
+                            </button>
+                        </div>
+                    </div>
+
+                    <!-- Tab Content -->
+                    <div class="p-8 space-y-6">
+                        <!-- Budget Table -->
+                        <div class="bg-white border border-gray-200 rounded-xl overflow-hidden">
+                            <div class="px-6 py-4 border-b border-gray-200 bg-gray-50">
+                                <h3 class="text-lg font-bold text-gray-900">항목별 예산 집행 현황</h3>
+                            </div>
+                            <div class="overflow-x-auto">
+                                <table class="w-full">
+                                    <thead class="bg-gray-50 border-b border-gray-200">
+                                        <tr>
+                                            <th class="px-6 py-4 text-left text-xs font-semibold text-gray-600 uppercase tracking-wider">구분</th>
+                                            <th class="px-6 py-4 text-left text-xs font-semibold text-gray-600 uppercase tracking-wider">항목</th>
+                                            <th class="px-6 py-4 text-right text-xs font-semibold text-gray-600 uppercase tracking-wider">최초예산</th>
+                                            <th class="px-6 py-4 text-right text-xs font-semibold text-gray-600 uppercase tracking-wider">변경예산</th>
+                                            <th class="px-6 py-4 text-right text-xs font-semibold text-gray-600 uppercase tracking-wider">집행액</th>
+                                            <th class="px-6 py-4 text-right text-xs font-semibold text-gray-600 uppercase tracking-wider">잔액</th>
+                                            <th class="px-6 py-4 text-right text-xs font-semibold text-gray-600 uppercase tracking-wider">집행률</th>
+                                        </tr>
+                                    </thead>
+                                    <tbody class="divide-y divide-gray-200">
+                                        <tr class="bg-blue-50">
+                                            <td class="px-6 py-4 whitespace-nowrap font-bold text-gray-900">수입</td>
+                                            <td class="px-6 py-4 font-semibold text-gray-900">총 수입</td>
+                                            <td class="px-6 py-4 text-right font-bold text-gray-900">₩500억</td>
+                                            <td class="px-6 py-4 text-right font-bold text-gray-900">₩500억</td>
+                                            <td class="px-6 py-4 text-right font-bold text-blue-600">₩320억</td>
+                                            <td class="px-6 py-4 text-right font-bold text-gray-900">₩180억</td>
+                                            <td class="px-6 py-4 text-right font-bold execution-medium">64.0%</td>
+                                        </tr>
+                                        <tr>
+                                            <td class="px-6 py-4"></td>
+                                            <td class="px-6 py-4 text-gray-700">분양수입</td>
+                                            <td class="px-6 py-4 text-right text-gray-700">₩450억</td>
+                                            <td class="px-6 py-4 text-right text-gray-700">₩450억</td>
+                                            <td class="px-6 py-4 text-right text-blue-600 font-medium">₩285억</td>
+                                            <td class="px-6 py-4 text-right text-gray-700">₩165억</td>
+                                            <td class="px-6 py-4 text-right execution-medium font-semibold">63.3%</td>
+                                        </tr>
+                                        <tr>
+                                            <td class="px-6 py-4"></td>
+                                            <td class="px-6 py-4 text-gray-700">임대수입</td>
+                                            <td class="px-6 py-4 text-right text-gray-700">₩50억</td>
+                                            <td class="px-6 py-4 text-right text-gray-700">₩50억</td>
+                                            <td class="px-6 py-4 text-right text-blue-600 font-medium">₩35억</td>
+                                            <td class="px-6 py-4 text-right text-gray-700">₩15억</td>
+                                            <td class="px-6 py-4 text-right execution-high font-semibold">70.0%</td>
+                                        </tr>
+                                        
+                                        <tr class="bg-red-50">
+                                            <td class="px-6 py-4 whitespace-nowrap font-bold text-gray-900">지출</td>
+                                            <td class="px-6 py-4 font-semibold text-gray-900">총 지출</td>
+                                            <td class="px-6 py-4 text-right font-bold text-gray-900">₩425억</td>
+                                            <td class="px-6 py-4 text-right font-bold text-gray-900">₩430억</td>
+                                            <td class="px-6 py-4 text-right font-bold text-red-600">₩290억</td>
+                                            <td class="px-6 py-4 text-right font-bold text-gray-900">₩140억</td>
+                                            <td class="px-6 py-4 text-right font-bold execution-high">67.4%</td>
+                                        </tr>
+                                        <tr>
+                                            <td class="px-6 py-4"></td>
+                                            <td class="px-6 py-4 text-gray-700">토지비</td>
+                                            <td class="px-6 py-4 text-right text-gray-700">₩150억</td>
+                                            <td class="px-6 py-4 text-right text-gray-700">₩150억</td>
+                                            <td class="px-6 py-4 text-right text-red-600 font-medium">₩150억</td>
+                                            <td class="px-6 py-4 text-right text-gray-700">₩0억</td>
+                                            <td class="px-6 py-4 text-right execution-over font-bold">100.0%</td>
+                                        </tr>
+                                        <tr>
+                                            <td class="px-6 py-4"></td>
+                                            <td class="px-6 py-4 text-gray-700">공사비</td>
+                                            <td class="px-6 py-4 text-right text-gray-700">₩200억</td>
+                                            <td class="px-6 py-4 text-right text-gray-700">₩205억</td>
+                                            <td class="px-6 py-4 text-right text-red-600 font-medium">₩105억</td>
+                                            <td class="px-6 py-4 text-right text-gray-700">₩100억</td>
+                                            <td class="px-6 py-4 text-right execution-medium font-semibold">51.2%</td>
+                                        </tr>
+                                        <tr>
+                                            <td class="px-6 py-4"></td>
+                                            <td class="px-6 py-4 text-gray-700">설계/감리비</td>
+                                            <td class="px-6 py-4 text-right text-gray-700">₩15억</td>
+                                            <td class="px-6 py-4 text-right text-gray-700">₩15억</td>
+                                            <td class="px-6 py-4 text-right text-red-600 font-medium">₩12억</td>
+                                            <td class="px-6 py-4 text-right text-gray-700">₩3억</td>
+                                            <td class="px-6 py-4 text-right execution-high font-semibold">80.0%</td>
+                                        </tr>
+                                        <tr>
+                                            <td class="px-6 py-4"></td>
+                                            <td class="px-6 py-4 text-gray-700">부담금/분담금</td>
+                                            <td class="px-6 py-4 text-right text-gray-700">₩30억</td>
+                                            <td class="px-6 py-4 text-right text-gray-700">₩30억</td>
+                                            <td class="px-6 py-4 text-right text-red-600 font-medium">₩8억</td>
+                                            <td class="px-6 py-4 text-right text-gray-700">₩22억</td>
+                                            <td class="px-6 py-4 text-right execution-low font-semibold">26.7%</td>
+                                        </tr>
+                                        <tr>
+                                            <td class="px-6 py-4"></td>
+                                            <td class="px-6 py-4 text-gray-700">금융비용</td>
+                                            <td class="px-6 py-4 text-right text-gray-700">₩20억</td>
+                                            <td class="px-6 py-4 text-right text-gray-700">₩20억</td>
+                                            <td class="px-6 py-4 text-right text-red-600 font-medium">₩10억</td>
+                                            <td class="px-6 py-4 text-right text-gray-700">₩10억</td>
+                                            <td class="px-6 py-4 text-right execution-medium font-semibold">50.0%</td>
+                                        </tr>
+                                        <tr>
+                                            <td class="px-6 py-4"></td>
+                                            <td class="px-6 py-4 text-gray-700">마케팅비</td>
+                                            <td class="px-6 py-4 text-right text-gray-700">₩10억</td>
+                                            <td class="px-6 py-4 text-right text-gray-700">₩10억</td>
+                                            <td class="px-6 py-4 text-right text-red-600 font-medium">₩5억</td>
+                                            <td class="px-6 py-4 text-right text-gray-700">₩5억</td>
+                                            <td class="px-6 py-4 text-right execution-medium font-semibold">50.0%</td>
+                                        </tr>
+
+                                        <tr class="bg-purple-50">
+                                            <td class="px-6 py-4 whitespace-nowrap font-bold text-gray-900">이익</td>
+                                            <td class="px-6 py-4 font-semibold text-gray-900">사업이익</td>
+                                            <td class="px-6 py-4 text-right font-bold text-gray-900">₩75억</td>
+                                            <td class="px-6 py-4 text-right font-bold text-gray-900">₩70억</td>
+                                            <td class="px-6 py-4 text-right font-bold text-purple-600">₩30억</td>
+                                            <td class="px-6 py-4 text-right font-bold text-gray-900">₩40억</td>
+                                            <td class="px-6 py-4 text-right font-bold text-gray-900">-</td>
+                                        </tr>
+                                    </tbody>
+                                </table>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Modal Footer -->
+                <div class="flex items-center justify-end space-x-3 p-6 border-t border-gray-200 bg-gray-50">
+                    <button onclick="closeDashboard()" class="px-6 py-2.5 text-gray-700 bg-white border border-gray-300 rounded-lg hover:bg-gray-50 transition-colors font-medium">
+                        닫기
+                    </button>
+                    <button class="px-6 py-2.5 text-white bg-blue-600 rounded-lg hover:bg-blue-700 transition-colors font-medium">
+                        품의서 작성
+                    </button>
+                    <button class="px-6 py-2.5 text-white bg-purple-600 rounded-lg hover:bg-purple-700 transition-colors font-medium">
+                        예산 변경
+                    </button>
+                    <button class="px-6 py-2.5 text-white bg-green-600 rounded-lg hover:bg-green-700 transition-colors font-medium">
+                        AI 분석
+                    </button>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        function openDashboard() {
+            document.getElementById('dashboardModal').classList.remove('hidden');
+            document.body.style.overflow = 'hidden';
+        }
+
+        function closeDashboard() {
+            document.getElementById('dashboardModal').classList.add('hidden');
+            document.body.style.overflow = 'auto';
+        }
+
+        // Close modal on ESC key
+        document.addEventListener('keydown', function(e) {
+            if (e.key === 'Escape') {
+                closeDashboard();
+            }
+        });
+    </script>
+</body>
+</html>
