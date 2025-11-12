@@ -20,76 +20,135 @@ export default {
         ring: 'hsl(var(--ring))',
         background: 'hsl(var(--background))',
         foreground: 'hsl(var(--foreground))',
+        // Primary - Professional Blue (차분하고 신뢰감 있는 블루)
         primary: {
-          DEFAULT: '#2563EB',
-          50: '#EFF6FF',
-          100: '#DBEAFE',
-          200: '#BFDBFE',
-          300: '#93C5FD',
-          400: '#60A5FA',
-          500: '#3B82F6',
-          600: '#2563EB',
-          700: '#1D4ED8',
-          800: '#1E40AF',
-          900: '#1E3A8A',
-          foreground: '#FFFFFF',
+          DEFAULT: '#1e40af',
+          50: '#eff6ff',
+          100: '#dbeafe',
+          200: '#bfdbfe',
+          300: '#93c5fd',
+          400: '#60a5fa',
+          500: '#3b82f6',
+          600: '#2563eb',
+          700: '#1e40af',
+          800: '#1e3a8a',
+          900: '#1e293b',
+          foreground: '#ffffff',
         },
+        // Secondary - Neutral Gray (모던하고 깔끔한)
         secondary: {
-          DEFAULT: 'hsl(var(--secondary))',
-          foreground: 'hsl(var(--secondary-foreground))',
+          DEFAULT: '#64748b',
+          50: '#f8fafc',
+          100: '#f1f5f9',
+          200: '#e2e8f0',
+          300: '#cbd5e1',
+          400: '#94a3b8',
+          500: '#64748b',
+          600: '#475569',
+          700: '#334155',
+          800: '#1e293b',
+          900: '#0f172a',
+          foreground: '#ffffff',
         },
+        // Success - Professional Green
         success: {
-          DEFAULT: '#10B981',
-          50: '#ECFDF5',
-          100: '#D1FAE5',
-          500: '#10B981',
+          DEFAULT: '#059669',
+          50: '#ecfdf5',
+          100: '#d1fae5',
+          200: '#a7f3d0',
+          300: '#6ee7b7',
+          400: '#34d399',
+          500: '#10b981',
           600: '#059669',
-          foreground: '#FFFFFF',
+          700: '#047857',
+          800: '#065f46',
+          900: '#064e3b',
+          foreground: '#ffffff',
         },
+        // Warning - Subtle Amber
         warning: {
-          DEFAULT: '#F59E0B',
-          50: '#FFFBEB',
-          100: '#FEF3C7',
-          500: '#F59E0B',
-          600: '#D97706',
-          foreground: '#FFFFFF',
+          DEFAULT: '#d97706',
+          50: '#fffbeb',
+          100: '#fef3c7',
+          200: '#fde68a',
+          300: '#fcd34d',
+          400: '#fbbf24',
+          500: '#f59e0b',
+          600: '#d97706',
+          700: '#b45309',
+          800: '#92400e',
+          900: '#78350f',
+          foreground: '#ffffff',
         },
+        // Danger - Clean Red
         danger: {
-          DEFAULT: '#EF4444',
-          50: '#FEF2F2',
-          100: '#FEE2E2',
-          500: '#EF4444',
-          600: '#DC2626',
-          foreground: '#FFFFFF',
+          DEFAULT: '#dc2626',
+          50: '#fef2f2',
+          100: '#fee2e2',
+          200: '#fecaca',
+          300: '#fca5a5',
+          400: '#f87171',
+          500: '#ef4444',
+          600: '#dc2626',
+          700: '#b91c1c',
+          800: '#991b1b',
+          900: '#7f1d1d',
+          foreground: '#ffffff',
         },
+        // Muted - Light Neutral
         muted: {
-          DEFAULT: 'hsl(var(--muted))',
-          foreground: 'hsl(var(--muted-foreground))',
+          DEFAULT: '#f1f5f9',
+          foreground: '#64748b',
         },
+        // Accent - Refined Purple (for highlights)
         accent: {
-          DEFAULT: 'hsl(var(--accent))',
-          foreground: 'hsl(var(--accent-foreground))',
+          DEFAULT: '#8b5cf6',
+          50: '#faf5ff',
+          100: '#f3e8ff',
+          200: '#e9d5ff',
+          300: '#d8b4fe',
+          400: '#c084fc',
+          500: '#a855f7',
+          600: '#9333ea',
+          700: '#7e22ce',
+          800: '#6b21a8',
+          900: '#581c87',
+          foreground: '#ffffff',
         },
+        // Destructive
         destructive: {
-          DEFAULT: 'hsl(var(--destructive))',
-          foreground: 'hsl(var(--destructive-foreground))',
+          DEFAULT: '#dc2626',
+          foreground: '#ffffff',
         },
-        // Custom execution rate colors
+        // Execution Rate Colors (for financial data visualization)
         execution: {
-          low: '#10B981',      // 0-50%: Green
-          medium: '#F59E0B',   // 50-75%: Yellow
-          high: '#FB923C',     // 75-90%: Orange
-          critical: '#EF4444', // 90-100%: Red
-          over: '#991B1B',     // >100%: Dark Red
+          excellent: '#059669',    // 0-50%: Excellent - Deep Green
+          good: '#10b981',         // 50-70%: Good - Green
+          moderate: '#f59e0b',     // 70-85%: Moderate - Amber
+          warning: '#fb923c',      // 85-95%: Warning - Orange
+          critical: '#ef4444',     // 95-100%: Critical - Red
+          over: '#991b1b',         // >100%: Over - Dark Red
+        },
+        // Chart Colors (for data visualization)
+        chart: {
+          1: '#3b82f6',  // Blue
+          2: '#10b981',  // Green
+          3: '#f59e0b',  // Amber
+          4: '#ef4444',  // Red
+          5: '#8b5cf6',  // Purple
+          6: '#ec4899',  // Pink
+          7: '#14b8a6',  // Teal
+          8: '#f97316',  // Orange
         },
       },
       borderRadius: {
-        lg: 'var(--radius)',
-        md: 'calc(var(--radius) - 2px)',
-        sm: 'calc(var(--radius) - 4px)',
+        lg: '0.75rem',
+        md: '0.5rem',
+        sm: '0.375rem',
       },
       fontFamily: {
         sans: [
+          'Pretendard',
           '-apple-system',
           'BlinkMacSystemFont',
           '"Segoe UI"',
@@ -99,11 +158,28 @@ export default {
           'sans-serif',
         ],
         mono: [
+          '"JetBrains Mono"',
           '"Fira Code"',
           'Consolas',
           'Monaco',
           'monospace',
         ],
+      },
+      spacing: {
+        '18': '4.5rem',
+        '88': '22rem',
+        '100': '25rem',
+        '112': '28rem',
+        '128': '32rem',
+      },
+      boxShadow: {
+        'sm': '0 1px 2px 0 rgba(0, 0, 0, 0.03)',
+        'DEFAULT': '0 1px 3px 0 rgba(0, 0, 0, 0.07), 0 1px 2px -1px rgba(0, 0, 0, 0.04)',
+        'md': '0 4px 6px -1px rgba(0, 0, 0, 0.07), 0 2px 4px -2px rgba(0, 0, 0, 0.04)',
+        'lg': '0 10px 15px -3px rgba(0, 0, 0, 0.07), 0 4px 6px -4px rgba(0, 0, 0, 0.04)',
+        'xl': '0 20px 25px -5px rgba(0, 0, 0, 0.07), 0 8px 10px -6px rgba(0, 0, 0, 0.04)',
+        '2xl': '0 25px 50px -12px rgba(0, 0, 0, 0.15)',
+        'inner': 'inset 0 2px 4px 0 rgba(0, 0, 0, 0.04)',
       },
       keyframes: {
         'accordion-down': {
@@ -114,10 +190,20 @@ export default {
           from: { height: 'var(--radix-accordion-content-height)' },
           to: { height: 0 },
         },
+        'fade-in': {
+          from: { opacity: 0 },
+          to: { opacity: 1 },
+        },
+        'slide-in': {
+          from: { transform: 'translateY(-10px)', opacity: 0 },
+          to: { transform: 'translateY(0)', opacity: 1 },
+        },
       },
       animation: {
         'accordion-down': 'accordion-down 0.2s ease-out',
         'accordion-up': 'accordion-up 0.2s ease-out',
+        'fade-in': 'fade-in 0.3s ease-out',
+        'slide-in': 'slide-in 0.3s ease-out',
       },
     },
   },

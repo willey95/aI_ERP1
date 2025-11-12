@@ -299,3 +299,194 @@ model Notification {
 
   @@map("notifications")
 }
+
+// ================== Financial Model & Cash Flow ==================
+
+enum DataType {
+  ACTUAL    // 실적 (고정, ERP에서 가져온 데이터)
+  FORECAST  // 전망 (수정 가능, 추정치)
+}
+
+enum ScenarioType {
+  BASE      // 기본 시나리오
+  OPTIMISTIC // 낙관적
+  PESSIMISTIC // 비관적
+  CUSTOM    // 사용자 정의
+}
+
+// 재무모델 메인 (프로젝트별 사업수지)
+model FinancialModel {
+  id            String   @id @default(uuid())
+  projectId     String   @map("project_id")
+
+  name          String   // 모델 이름 (e.g., "2024년 1차 수정")
+  version       String   // 버전 (e.g., "v1.0", "v2.1")
+  isActive      Boolean  @default(true) @map("is_active") // 활성 모델 여부
+
+  baseDate      DateTime @map("base_date") // 기준일
+  startDate     DateTime @map("start_date") // 시작일
+  endDate       DateTime @map("end_date")   // 종료일
+
+  description   String?  @db.Text
+  metadata      Json?    // 추가 메타데이터 (ERP 연동 정보 등)
+
+  createdBy     String   @map("created_by")
+  createdAt     DateTime @default(now()) @map("created_at")
+  updatedAt     DateTime @updatedAt @map("updated_at")
+
+  // Relations
+  cfItems       CashFlowItem[]
+  scenarios     Scenario[]
+
+  @@unique([projectId, version])
+  @@map("financial_models")
+}
+
+// CF 항목 (수입/지출 항목 정의)
+model CashFlowItem {
+  id                String   @id @default(uuid())
+  financialModelId  String   @map("financial_model_id")
+  financialModel    FinancialModel @relation(fields: [financialModelId], references: [id], onDelete: Cascade)
+
+  code              String   // 항목 코드 (e.g., "R-001", "E-001")
+  name              String   // 항목명 (e.g., "분양수입", "공사비")
+  category          BudgetCategory // REVENUE or EXPENSE
+  type              BudgetItemType
+
+  // 계층 구조
+  parentId          String?  @map("parent_id")
+  parent            CashFlowItem? @relation("CFItemHierarchy", fields: [parentId], references: [id])
+  children          CashFlowItem[] @relation("CFItemHierarchy")
+
+  order             Int      @default(0) // 표시 순서
+  isCalculated      Boolean  @default(false) @map("is_calculated") // 계산식 항목 여부
+  formula           String?  // 계산식 (JSON 형태)
+
+  // ERP 매핑 정보
+  erpSource         String?  @map("erp_source") // ERP 시스템 출처
+  erpCode           String?  @map("erp_code")   // ERP 항목 코드
+  erpLastSync       DateTime? @map("erp_last_sync") // 마지막 동기화 시간
+
+  createdAt         DateTime @default(now()) @map("created_at")
+  updatedAt         DateTime @updatedAt @map("updated_at")
+
+  // Relations
+  cfData            CashFlowData[]
+  cellNotes         CellNote[]
+
+  @@unique([financialModelId, code])
+  @@map("cashflow_items")
+}
+
+// CF 실제 데이터 (월별/분기별 실적/전망)
+model CashFlowData {
+  id            String   @id @default(uuid())
+  cfItemId      String   @map("cf_item_id")
+  cfItem        CashFlowItem @relation(fields: [cfItemId], references: [id], onDelete: Cascade)
+
+  scenarioId    String?  @map("scenario_id") // null이면 기본 시나리오
+  scenario      Scenario? @relation(fields: [scenarioId], references: [id], onDelete: Cascade)
+
+  period        DateTime // 기간 (월/분기 시작일)
+  dataType      DataType // ACTUAL or FORECAST
+
+  amount        Decimal  @db.Decimal(20, 2)
+
+  // 메타 정보
+  source        String?  // 데이터 출처 (ERP, 수동입력, AI추정 등)
+  confidence    Float?   // 신뢰도 (0-1)
+  note          String?  @db.Text // 간단한 메모
+
+  // ERP 연동 정보
+  erpReference  String?  @map("erp_reference") // ERP 참조 ID
+  erpSyncedAt   DateTime? @map("erp_synced_at")
+  isLocked      Boolean  @default(false) @map("is_locked") // 실적 데이터는 잠금
+
+  createdBy     String?  @map("created_by")
+  createdAt     DateTime @default(now()) @map("created_at")
+  updatedAt     DateTime @updatedAt @map("updated_at")
+
+  @@unique([cfItemId, period, dataType, scenarioId])
+  @@index([cfItemId, period])
+  @@index([scenarioId])
+  @@map("cashflow_data")
+}
+
+// 시나리오 관리 (여러 전망치 비교)
+model Scenario {
+  id                String   @id @default(uuid())
+  financialModelId  String   @map("financial_model_id")
+  financialModel    FinancialModel @relation(fields: [financialModelId], references: [id], onDelete: Cascade)
+
+  name              String   // 시나리오 이름
+  type              ScenarioType
+  description       String?  @db.Text
+
+  // 시나리오 가정
+  assumptions       Json     // 시나리오별 가정 (분양률, 금리, 공사비 인상률 등)
+
+  isBaseline        Boolean  @default(false) @map("is_baseline") // 기준 시나리오 여부
+  isActive          Boolean  @default(true) @map("is_active")
+
+  // 결과 요약
+  totalRevenue      Decimal? @map("total_revenue") @db.Decimal(20, 2)
+  totalExpense      Decimal? @map("total_expense") @db.Decimal(20, 2)
+  netProfit         Decimal? @map("net_profit") @db.Decimal(20, 2)
+  roi               Float?
+  irr               Float?
+
+  createdBy         String   @map("created_by")
+  createdAt         DateTime @default(now()) @map("created_at")
+  updatedAt         DateTime @updatedAt @map("updated_at")
+
+  // Relations
+  cfData            CashFlowData[]
+
+  @@unique([financialModelId, name])
+  @@map("scenarios")
+}
+
+// 셀 단위 메모 (각 CF 데이터에 대한 상세 메모)
+model CellNote {
+  id          String   @id @default(uuid())
+  cfItemId    String   @map("cf_item_id")
+  cfItem      CashFlowItem @relation(fields: [cfItemId], references: [id], onDelete: Cascade)
+
+  period      DateTime // 기간
+
+  title       String?
+  content     String   @db.Text
+  tags        String[] // 태그 (검색용)
+
+  attachments Json?    // 첨부파일 정보
+
+  createdBy   String   @map("created_by")
+  createdAt   DateTime @default(now()) @map("created_at")
+  updatedAt   DateTime @updatedAt @map("updated_at")
+
+  @@index([cfItemId, period])
+  @@map("cell_notes")
+}
+
+// ERP 연동 이력
+model ERPSyncLog {
+  id            String   @id @default(uuid())
+  projectId     String   @map("project_id")
+
+  syncType      String   // IMPORT or EXPORT
+  status        String   // SUCCESS, FAILED, PARTIAL
+
+  itemsCount    Int      @map("items_count")
+  successCount  Int      @map("success_count")
+  failedCount   Int      @map("failed_count")
+
+  errorLog      Json?    @map("error_log")
+  metadata      Json?
+
+  startedAt     DateTime @map("started_at")
+  completedAt   DateTime? @map("completed_at")
+
+  createdBy     String   @map("created_by")
+
+  @@map("erp_sync_logs")
+}
