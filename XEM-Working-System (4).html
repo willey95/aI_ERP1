@@ -1,0 +1,656 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>XEM - 사업비 집행 관리 시스템</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Pretendard:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+    <script>
+        tailwind.config = {
+            theme: {
+                extend: {
+                    colors: {
+                        primary: {
+                            50: '#eff6ff',
+                            500: '#3b82f6',
+                            600: '#2563eb',
+                            700: '#1d4ed8',
+                        },
+                        success: {
+                            50: '#f0fdf4',
+                            500: '#22c55e',
+                            600: '#16a34a',
+                        },
+                        warning: {
+                            50: '#fffbeb',
+                            500: '#f59e0b',
+                            600: '#d97706',
+                        },
+                        danger: {
+                            50: '#fef2f2',
+                            500: '#ef4444',
+                            600: '#dc2626',
+                        },
+                    },
+                    fontFamily: {
+                        sans: ['Pretendard', 'system-ui', 'sans-serif'],
+                    },
+                }
+            }
+        }
+    </script>
+    <style>
+        * { font-family: 'Pretendard', -apple-system, BlinkMacSystemFont, system-ui, sans-serif; }
+        ::-webkit-scrollbar { width: 6px; height: 6px; }
+        ::-webkit-scrollbar-track { background: transparent; }
+        ::-webkit-scrollbar-thumb { background: #d4d4d4; border-radius: 3px; }
+        ::-webkit-scrollbar-thumb:hover { background: #a3a3a3; }
+        
+        .card-hover { transition: all 0.2s cubic-bezier(0.4, 0, 0.2, 1); }
+        .card-hover:hover { transform: translateY(-2px); box-shadow: 0 20px 25px -5px rgba(0, 0, 0, 0.1); }
+        
+        .nav-item-active {
+            background: linear-gradient(135deg, #3b82f6 0%, #2563eb 100%);
+            color: white;
+            box-shadow: 0 4px 6px -1px rgba(37, 99, 235, 0.3);
+        }
+        
+        .badge-sm {
+            padding: 2px 8px;
+            border-radius: 6px;
+            font-size: 11px;
+            font-weight: 600;
+            letter-spacing: 0.5px;
+        }
+        
+        .exec-excellent { color: #22c55e; background: #f0fdf4; }
+        .exec-good { color: #84cc16; background: #f7fee7; }
+        .exec-warning { color: #f59e0b; background: #fffbeb; }
+        .exec-danger { color: #ef4444; background: #fef2f2; }
+        .exec-critical { color: #dc2626; background: #fef2f2; }
+        
+        .status-dot { width: 8px; height: 8px; border-radius: 50%; display: inline-block; }
+        
+        .table-row:hover { background-color: #f9fafb; cursor: pointer; }
+        
+        input:focus, select:focus, textarea:focus {
+            outline: none;
+            border-color: #3b82f6;
+            box-shadow: 0 0 0 3px rgba(59, 130, 246, 0.1);
+        }
+        
+        .page-content { display: none; }
+        .page-content.active { display: block; animation: fadeIn 0.3s ease-out; }
+        
+        @keyframes fadeIn {
+            from { opacity: 0; transform: translateY(10px); }
+            to { opacity: 1; transform: translateY(0); }
+        }
+    </style>
+</head>
+<body class="bg-neutral-50 antialiased">
+    
+    <!-- Sidebar Navigation -->
+    <aside class="fixed left-0 top-0 h-screen w-64 bg-white border-r border-neutral-200 flex flex-col z-40">
+        <!-- Logo -->
+        <div class="h-16 flex items-center px-6 border-b border-neutral-200">
+            <div class="flex items-center space-x-3">
+                <div class="w-9 h-9 rounded-xl bg-gradient-to-br from-primary-500 to-primary-700 flex items-center justify-center shadow-lg">
+                    <svg class="w-5 h-5 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2.5" d="M9 7h6m0 10v-3m-3 3h.01M9 17h.01M9 14h.01M12 14h.01M15 11h.01M12 11h.01M9 11h.01M7 21h10a2 2 0 002-2V5a2 2 0 00-2-2H7a2 2 0 00-2 2v14a2 2 0 002 2z" />
+                    </svg>
+                </div>
+                <div>
+                    <h1 class="text-lg font-bold text-neutral-900">XEM</h1>
+                    <p class="text-xs text-neutral-500">사업비 관리</p>
+                </div>
+            </div>
+        </div>
+
+        <!-- Navigation Menu -->
+        <nav class="flex-1 px-3 py-4 overflow-y-auto">
+            <div class="space-y-1">
+                <a href="#" onclick="showPage('dashboard'); return false;" data-page="dashboard" class="nav-link nav-item-active flex items-center space-x-3 px-4 py-3 rounded-xl">
+                    <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M3 12l2-2m0 0l7-7 7 7M5 10v10a1 1 0 001 1h3m10-11l2 2m-2-2v10a1 1 0 01-1 1h-3m-6 0a1 1 0 001-1v-4a1 1 0 011-1h2a1 1 0 011 1v4a1 1 0 001 1m-6 0h6" />
+                    </svg>
+                    <span class="font-semibold text-sm">대시보드</span>
+                </a>
+
+                <a href="#" onclick="showPage('projects'); return false;" data-page="projects" class="nav-link flex items-center space-x-3 px-4 py-3 rounded-xl text-neutral-700 hover:bg-neutral-100">
+                    <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 21V5a2 2 0 00-2-2H7a2 2 0 00-2 2v16m14 0h2m-2 0h-5m-9 0H3m2 0h5M9 7h1m-1 4h1m4-4h1m-1 4h1m-5 10v-5a1 1 0 011-1h2a1 1 0 011 1v5m-4 0h4" />
+                    </svg>
+                    <span class="font-medium text-sm">프로젝트</span>
+                </a>
+
+                <a href="#" onclick="showPage('budget'); return false;" data-page="budget" class="nav-link flex items-center space-x-3 px-4 py-3 rounded-xl text-neutral-700 hover:bg-neutral-100">
+                    <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 7h6m0 10v-3m-3 3h.01M9 17h.01M9 14h.01M12 14h.01M15 11h.01M12 11h.01M9 11h.01M7 21h10a2 2 0 002-2V5a2 2 0 00-2-2H7a2 2 0 00-2 2v14a2 2 0 002 2z" />
+                    </svg>
+                    <span class="font-medium text-sm">예산 관리</span>
+                </a>
+
+                <a href="#" onclick="showPage('execution'); return false;" data-page="execution" class="nav-link flex items-center space-x-3 px-4 py-3 rounded-xl text-neutral-700 hover:bg-neutral-100">
+                    <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" />
+                    </svg>
+                    <span class="font-medium text-sm">집행 관리</span>
+                    <span class="ml-auto badge-sm bg-danger-50 text-danger-600">3</span>
+                </a>
+
+                <a href="#" onclick="showPage('approval'); return false;" data-page="approval" class="nav-link flex items-center space-x-3 px-4 py-3 rounded-xl text-neutral-700 hover:bg-neutral-100">
+                    <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z" />
+                    </svg>
+                    <span class="font-medium text-sm">결재</span>
+                    <span class="ml-auto badge-sm bg-warning-50 text-warning-600">7</span>
+                </a>
+
+                <a href="#" onclick="showPage('analytics'); return false;" data-page="analytics" class="nav-link flex items-center space-x-3 px-4 py-3 rounded-xl text-neutral-700 hover:bg-neutral-100">
+                    <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 19v-6a2 2 0 00-2-2H5a2 2 0 00-2 2v6a2 2 0 002 2h2a2 2 0 002-2zm0 0V9a2 2 0 012-2h2a2 2 0 012 2v10m-6 0a2 2 0 002 2h2a2 2 0 002-2m0 0V5a2 2 0 012-2h2a2 2 0 012 2v14a2 2 0 01-2 2h-2a2 2 0 01-2-2z" />
+                    </svg>
+                    <span class="font-medium text-sm">분석 리포트</span>
+                </a>
+
+                <a href="#" onclick="showPage('simulation'); return false;" data-page="simulation" class="nav-link flex items-center space-x-3 px-4 py-3 rounded-xl text-neutral-700 hover:bg-neutral-100">
+                    <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 10V3L4 14h7v7l9-11h-7z" />
+                    </svg>
+                    <span class="font-medium text-sm">시뮬레이션</span>
+                </a>
+            </div>
+
+            <div class="mt-8 pt-8 border-t border-neutral-200">
+                <p class="px-4 text-xs font-semibold text-neutral-500 uppercase tracking-wider mb-3">설정</p>
+                <div class="space-y-1">
+                    <a href="#" onclick="showPage('users'); return false;" data-page="users" class="nav-link flex items-center space-x-3 px-4 py-3 rounded-xl text-neutral-700 hover:bg-neutral-100">
+                        <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 4.354a4 4 0 110 5.292M15 21H3v-1a6 6 0 0112 0v1zm0 0h6v-1a6 6 0 00-9-5.197M13 7a4 4 0 11-8 0 4 4 0 018 0z" />
+                        </svg>
+                        <span class="font-medium text-sm">사용자 관리</span>
+                    </a>
+                    <a href="#" onclick="showPage('settings'); return false;" data-page="settings" class="nav-link flex items-center space-x-3 px-4 py-3 rounded-xl text-neutral-700 hover:bg-neutral-100">
+                        <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M10.325 4.317c.426-1.756 2.924-1.756 3.35 0a1.724 1.724 0 002.573 1.066c1.543-.94 3.31.826 2.37 2.37a1.724 1.724 0 001.065 2.572c1.756.426 1.756 2.924 0 3.35a1.724 1.724 0 00-1.066 2.573c.94 1.543-.826 3.31-2.37 2.37a1.724 1.724 0 00-2.572 1.065c-.426 1.756-2.924 1.756-3.35 0a1.724 1.724 0 00-2.573-1.066c-1.543.94-3.31-.826-2.37-2.37a1.724 1.724 0 00-1.065-2.572c-1.756-.426-1.756-2.924 0-3.35a1.724 1.724 0 001.066-2.573c-.94-1.543.826-3.31 2.37-2.37.996.608 2.296.07 2.572-1.065z" />
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 12a3 3 0 11-6 0 3 3 0 016 0z" />
+                        </svg>
+                        <span class="font-medium text-sm">시스템 설정</span>
+                    </a>
+                </div>
+            </div>
+        </nav>
+
+        <!-- User Profile -->
+        <div class="p-3 border-t border-neutral-200">
+            <div class="flex items-center space-x-3 p-3 rounded-xl hover:bg-neutral-100 cursor-pointer">
+                <div class="w-10 h-10 rounded-full bg-gradient-to-br from-primary-500 to-primary-700 flex items-center justify-center text-white font-bold text-sm shadow-md">
+                    김
+                </div>
+                <div class="flex-1 min-w-0">
+                    <p class="text-sm font-semibold text-neutral-900 truncate">김철수</p>
+                    <p class="text-xs text-neutral-500">CFO</p>
+                </div>
+                <svg class="w-4 h-4 text-neutral-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8 9l4-4 4 4m0 6l-4 4-4-4" />
+                </svg>
+            </div>
+        </div>
+    </aside>
+
+    <!-- Main Content Area -->
+    <main class="ml-64 min-h-screen">
+        <!-- Top Bar -->
+        <header class="sticky top-0 z-30 bg-white/80 backdrop-blur-lg border-b border-neutral-200">
+            <div class="px-8 h-16 flex items-center justify-between">
+                <div class="flex-1 max-w-2xl">
+                    <div class="relative">
+                        <svg class="absolute left-4 top-1/2 -translate-y-1/2 w-5 h-5 text-neutral-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z" />
+                        </svg>
+                        <input 
+                            type="text" 
+                            placeholder="프로젝트, 예산 항목 검색... (⌘K)" 
+                            class="w-full pl-12 pr-4 py-2.5 bg-neutral-100 border-0 rounded-xl text-sm placeholder-neutral-500 focus:bg-white focus:ring-2 focus:ring-primary-500"
+                        />
+                    </div>
+                </div>
+
+                <div class="flex items-center space-x-4 ml-8">
+                    <button onclick="alert('신규 품의 작성 기능')" class="px-4 py-2 bg-primary-600 hover:bg-primary-700 text-white rounded-xl text-sm font-semibold shadow-sm flex items-center space-x-2">
+                        <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 4v16m8-8H4" />
+                        </svg>
+                        <span>신규 품의</span>
+                    </button>
+
+                    <button class="relative p-2 text-neutral-600 hover:bg-neutral-100 rounded-xl">
+                        <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 17h5l-1.405-1.405A2.032 2.032 0 0118 14.158V11a6.002 6.002 0 00-4-5.659V5a2 2 0 10-4 0v.341C7.67 6.165 6 8.388 6 11v3.159c0 .538-.214 1.055-.595 1.436L4 17h5m6 0v1a3 3 0 11-6 0v-1m6 0H9" />
+                        </svg>
+                        <span class="absolute top-1 right-1 w-2 h-2 bg-danger-500 rounded-full"></span>
+                    </button>
+                </div>
+            </div>
+        </header>
+
+        <!-- Page Content Container -->
+        <div id="pageContainer">
+            <!-- Dashboard Page -->
+            <div id="dashboard-page" class="page-content active">
+                <div class="p-8">
+                    <div class="mb-8">
+                        <h2 class="text-2xl font-bold text-neutral-900 mb-2">대시보드</h2>
+                        <p class="text-neutral-600">전체 프로젝트의 예산 집행 현황을 확인하세요</p>
+                    </div>
+
+                    <!-- KPI Cards -->
+                    <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6 mb-8">
+                        <div class="bg-white rounded-2xl p-6 border border-neutral-200 card-hover">
+                            <div class="flex items-center justify-between mb-4">
+                                <div class="w-12 h-12 rounded-xl bg-primary-50 flex items-center justify-center">
+                                    <svg class="w-6 h-6 text-primary-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 21V5a2 2 0 00-2-2H7a2 2 0 00-2 2v16m14 0h2m-2 0h-5m-9 0H3m2 0h5M9 7h1m-1 4h1m4-4h1m-1 4h1m-5 10v-5a1 1 0 011-1h2a1 1 0 011 1v5m-4 0h4" />
+                                    </svg>
+                                </div>
+                                <span class="text-xs font-semibold text-success-600 bg-success-50 px-2 py-1 rounded-lg">+12%</span>
+                            </div>
+                            <p class="text-3xl font-bold text-neutral-900 mb-1">24</p>
+                            <p class="text-sm text-neutral-600">진행중인 프로젝트</p>
+                        </div>
+
+                        <div class="bg-white rounded-2xl p-6 border border-neutral-200 card-hover">
+                            <div class="flex items-center justify-between mb-4">
+                                <div class="w-12 h-12 rounded-xl bg-success-50 flex items-center justify-center">
+                                    <svg class="w-6 h-6 text-success-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 8c-1.657 0-3 .895-3 2s1.343 2 3 2 3 .895 3 2-1.343 2-3 2m0-8c1.11 0 2.08.402 2.599 1M12 8V7m0 1v8m0 0v1m0-1c-1.11 0-2.08-.402-2.599-1M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
+                                    </svg>
+                                </div>
+                                <span class="text-xs font-semibold text-primary-600 bg-primary-50 px-2 py-1 rounded-lg">진행중</span>
+                            </div>
+                            <p class="text-3xl font-bold text-neutral-900 mb-1">₩3.2조</p>
+                            <p class="text-sm text-neutral-600">총 예산 규모</p>
+                        </div>
+
+                        <div class="bg-white rounded-2xl p-6 border border-neutral-200 card-hover">
+                            <div class="flex items-center justify-between mb-4">
+                                <div class="w-12 h-12 rounded-xl bg-warning-50 flex items-center justify-center">
+                                    <svg class="w-6 h-6 text-warning-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 7h8m0 0v8m0-8l-8 8-4-4-6 6" />
+                                    </svg>
+                                </div>
+                                <span class="text-xs font-semibold text-warning-600 bg-warning-50 px-2 py-1 rounded-lg">평균</span>
+                            </div>
+                            <p class="text-3xl font-bold text-neutral-900 mb-1">68.4%</p>
+                            <p class="text-sm text-neutral-600">평균 집행률</p>
+                        </div>
+
+                        <div class="bg-white rounded-2xl p-6 border border-neutral-200 card-hover">
+                            <div class="flex items-center justify-between mb-4">
+                                <div class="w-12 h-12 rounded-xl bg-danger-50 flex items-center justify-center">
+                                    <svg class="w-6 h-6 text-danger-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z" />
+                                    </svg>
+                                </div>
+                                <span class="text-xs font-semibold text-danger-600 bg-danger-50 px-2 py-1 rounded-lg">긴급</span>
+                            </div>
+                            <p class="text-3xl font-bold text-neutral-900 mb-1">7</p>
+                            <p class="text-sm text-neutral-600">결재 대기중</p>
+                        </div>
+                    </div>
+
+                    <!-- Quick View Button -->
+                    <div class="text-center">
+                        <button onclick="showPage('projects')" class="px-6 py-3 bg-primary-600 hover:bg-primary-700 text-white rounded-xl font-semibold shadow-lg">
+                            프로젝트 관리로 이동 →
+                        </button>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Projects Page -->
+            <div id="projects-page" class="page-content">
+                <div class="p-8">
+                    <div class="mb-8">
+                        <h2 class="text-2xl font-bold text-neutral-900 mb-2">프로젝트 관리</h2>
+                        <p class="text-neutral-600">모든 프로젝트의 예산 집행을 관리하세요</p>
+                    </div>
+
+                    <!-- Filter Bar -->
+                    <div class="bg-white rounded-2xl p-6 border border-neutral-200 mb-6">
+                        <div class="flex items-center justify-between">
+                            <div class="flex items-center space-x-3">
+                                <select class="px-4 py-2 bg-neutral-50 border-0 rounded-xl text-sm font-medium text-neutral-700 focus:ring-2 focus:ring-primary-500">
+                                    <option>전체 상태</option>
+                                    <option>진행중</option>
+                                    <option>완료</option>
+                                    <option>지연</option>
+                                </select>
+                                <select class="px-4 py-2 bg-neutral-50 border-0 rounded-xl text-sm font-medium text-neutral-700 focus:ring-2 focus:ring-primary-500">
+                                    <option>최근 순</option>
+                                    <option>이름 순</option>
+                                    <option>예산 순</option>
+                                    <option>집행률 순</option>
+                                </select>
+                            </div>
+                            <button class="px-4 py-2 bg-primary-600 hover:bg-primary-700 text-white rounded-xl text-sm font-semibold">
+                                + 신규 프로젝트
+                            </button>
+                        </div>
+                    </div>
+
+                    <!-- Projects Table -->
+                    <div class="bg-white rounded-2xl border border-neutral-200 overflow-hidden">
+                        <div class="px-6 py-4 bg-neutral-50 border-b border-neutral-200">
+                            <h3 class="text-base font-bold text-neutral-900">프로젝트 목록</h3>
+                        </div>
+                        <div class="overflow-x-auto">
+                            <table class="w-full">
+                                <thead>
+                                    <tr class="bg-neutral-50 border-b border-neutral-200">
+                                        <th class="px-6 py-4 text-left text-xs font-semibold text-neutral-600 uppercase tracking-wider">프로젝트명</th>
+                                        <th class="px-6 py-4 text-left text-xs font-semibold text-neutral-600 uppercase tracking-wider">위치</th>
+                                        <th class="px-6 py-4 text-right text-xs font-semibold text-neutral-600 uppercase tracking-wider">총 예산</th>
+                                        <th class="px-6 py-4 text-right text-xs font-semibold text-neutral-600 uppercase tracking-wider">집행액</th>
+                                        <th class="px-6 py-4 text-right text-xs font-semibold text-neutral-600 uppercase tracking-wider">잔액</th>
+                                        <th class="px-6 py-4 text-center text-xs font-semibold text-neutral-600 uppercase tracking-wider">집행률</th>
+                                        <th class="px-6 py-4 text-center text-xs font-semibold text-neutral-600 uppercase tracking-wider">리스크</th>
+                                        <th class="px-6 py-4 text-center text-xs font-semibold text-neutral-600 uppercase tracking-wider">상태</th>
+                                        <th class="px-6 py-4 text-center text-xs font-semibold text-neutral-600 uppercase tracking-wider">액션</th>
+                                    </tr>
+                                </thead>
+                                <tbody class="divide-y divide-neutral-200">
+                                    <!-- Row 1 -->
+                                    <tr class="table-row">
+                                        <td class="px-6 py-4">
+                                            <div>
+                                                <p class="font-bold text-neutral-900">강남 센트럴 오피스텔</p>
+                                                <p class="text-xs text-neutral-500 mt-1">480세대 · 2025.03 준공</p>
+                                            </div>
+                                        </td>
+                                        <td class="px-6 py-4 text-sm text-neutral-700">서울시 강남구 역삼동</td>
+                                        <td class="px-6 py-4 text-right text-sm font-bold text-neutral-900">₩500억</td>
+                                        <td class="px-6 py-4 text-right text-sm font-semibold text-primary-600">₩451억</td>
+                                        <td class="px-6 py-4 text-right text-sm font-semibold text-danger-600">₩49억</td>
+                                        <td class="px-6 py-4 text-center">
+                                            <div class="flex flex-col items-center">
+                                                <span class="badge-sm exec-critical mb-1">90.2%</span>
+                                                <div class="w-20 h-1.5 bg-neutral-100 rounded-full overflow-hidden">
+                                                    <div class="h-full bg-danger-500" style="width: 90.2%"></div>
+                                                </div>
+                                            </div>
+                                        </td>
+                                        <td class="px-6 py-4 text-center">
+                                            <span class="badge-sm bg-danger-50 text-danger-600">위험 85</span>
+                                        </td>
+                                        <td class="px-6 py-4 text-center">
+                                            <span class="inline-flex items-center space-x-1">
+                                                <span class="status-dot bg-danger-500"></span>
+                                                <span class="text-sm text-neutral-700">긴급</span>
+                                            </span>
+                                        </td>
+                                        <td class="px-6 py-4 text-center">
+                                            <button onclick="showPage('budget')" class="text-primary-600 hover:text-primary-700 text-sm font-semibold">상세</button>
+                                        </td>
+                                    </tr>
+
+                                    <!-- Row 2 -->
+                                    <tr class="table-row">
+                                        <td class="px-6 py-4">
+                                            <div>
+                                                <p class="font-bold text-neutral-900">판교 테크밸리 상가</p>
+                                                <p class="text-xs text-neutral-500 mt-1">120호 · 2025.09 준공</p>
+                                            </div>
+                                        </td>
+                                        <td class="px-6 py-4 text-sm text-neutral-700">경기도 성남시 분당구</td>
+                                        <td class="px-6 py-4 text-right text-sm font-bold text-neutral-900">₩350억</td>
+                                        <td class="px-6 py-4 text-right text-sm font-semibold text-primary-600">₩160억</td>
+                                        <td class="px-6 py-4 text-right text-sm font-semibold text-success-600">₩190억</td>
+                                        <td class="px-6 py-4 text-center">
+                                            <div class="flex flex-col items-center">
+                                                <span class="badge-sm exec-excellent mb-1">45.8%</span>
+                                                <div class="w-20 h-1.5 bg-neutral-100 rounded-full overflow-hidden">
+                                                    <div class="h-full bg-success-500" style="width: 45.8%"></div>
+                                                </div>
+                                            </div>
+                                        </td>
+                                        <td class="px-6 py-4 text-center">
+                                            <span class="badge-sm bg-success-50 text-success-600">정상 32</span>
+                                        </td>
+                                        <td class="px-6 py-4 text-center">
+                                            <span class="inline-flex items-center space-x-1">
+                                                <span class="status-dot bg-success-500"></span>
+                                                <span class="text-sm text-neutral-700">정상</span>
+                                            </span>
+                                        </td>
+                                        <td class="px-6 py-4 text-center">
+                                            <button onclick="showPage('budget')" class="text-primary-600 hover:text-primary-700 text-sm font-semibold">상세</button>
+                                        </td>
+                                    </tr>
+
+                                    <!-- Row 3 -->
+                                    <tr class="table-row">
+                                        <td class="px-6 py-4">
+                                            <div>
+                                                <p class="font-bold text-neutral-900">송도 더샵 센트럴시티</p>
+                                                <p class="text-xs text-neutral-500 mt-1">650세대 · 2025.06 준공</p>
+                                            </div>
+                                        </td>
+                                        <td class="px-6 py-4 text-sm text-neutral-700">인천시 연수구 송도동</td>
+                                        <td class="px-6 py-4 text-right text-sm font-bold text-neutral-900">₩800억</td>
+                                        <td class="px-6 py-4 text-right text-sm font-semibold text-primary-600">₩626억</td>
+                                        <td class="px-6 py-4 text-right text-sm font-semibold text-warning-600">₩174억</td>
+                                        <td class="px-6 py-4 text-center">
+                                            <div class="flex flex-col items-center">
+                                                <span class="badge-sm exec-warning mb-1">78.3%</span>
+                                                <div class="w-20 h-1.5 bg-neutral-100 rounded-full overflow-hidden">
+                                                    <div class="h-full bg-warning-500" style="width: 78.3%"></div>
+                                                </div>
+                                            </div>
+                                        </td>
+                                        <td class="px-6 py-4 text-center">
+                                            <span class="badge-sm bg-warning-50 text-warning-600">주의 68</span>
+                                        </td>
+                                        <td class="px-6 py-4 text-center">
+                                            <span class="inline-flex items-center space-x-1">
+                                                <span class="status-dot bg-warning-500"></span>
+                                                <span class="text-sm text-neutral-700">주의</span>
+                                            </span>
+                                        </td>
+                                        <td class="px-6 py-4 text-center">
+                                            <button onclick="showPage('budget')" class="text-primary-600 hover:text-primary-700 text-sm font-semibold">상세</button>
+                                        </td>
+                                    </tr>
+
+                                    <!-- Row 4 -->
+                                    <tr class="table-row">
+                                        <td class="px-6 py-4">
+                                            <div>
+                                                <p class="font-bold text-neutral-900">용인 동백 레이크시티</p>
+                                                <p class="text-xs text-neutral-500 mt-1">890세대 · 2026.01 준공</p>
+                                            </div>
+                                        </td>
+                                        <td class="px-6 py-4 text-sm text-neutral-700">경기도 용인시 기흥구</td>
+                                        <td class="px-6 py-4 text-right text-sm font-bold text-neutral-900">₩1,200억</td>
+                                        <td class="px-6 py-4 text-right text-sm font-semibold text-primary-600">₩745억</td>
+                                        <td class="px-6 py-4 text-right text-sm font-semibold text-success-600">₩455억</td>
+                                        <td class="px-6 py-4 text-center">
+                                            <div class="flex flex-col items-center">
+                                                <span class="badge-sm exec-good mb-1">62.1%</span>
+                                                <div class="w-20 h-1.5 bg-neutral-100 rounded-full overflow-hidden">
+                                                    <div class="h-full bg-success-500" style="width: 62.1%"></div>
+                                                </div>
+                                            </div>
+                                        </td>
+                                        <td class="px-6 py-4 text-center">
+                                            <span class="badge-sm bg-success-50 text-success-600">양호 45</span>
+                                        </td>
+                                        <td class="px-6 py-4 text-center">
+                                            <span class="inline-flex items-center space-x-1">
+                                                <span class="status-dot bg-success-500"></span>
+                                                <span class="text-sm text-neutral-700">양호</span>
+                                            </span>
+                                        </td>
+                                        <td class="px-6 py-4 text-center">
+                                            <button onclick="showPage('budget')" class="text-primary-600 hover:text-primary-700 text-sm font-semibold">상세</button>
+                                        </td>
+                                    </tr>
+                                </tbody>
+                            </table>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Budget Page -->
+            <div id="budget-page" class="page-content">
+                <div class="p-8">
+                    <div class="mb-8">
+                        <h2 class="text-2xl font-bold text-neutral-900 mb-2">예산 관리</h2>
+                        <p class="text-neutral-600">프로젝트별 예산 수립 및 변경을 관리하세요</p>
+                    </div>
+
+                    <div class="bg-white rounded-2xl p-6 border border-neutral-200">
+                        <p class="text-center text-neutral-500 py-12">예산 관리 화면 (구현 예정)</p>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Execution Page -->
+            <div id="execution-page" class="page-content">
+                <div class="p-8">
+                    <div class="mb-8">
+                        <h2 class="text-2xl font-bold text-neutral-900 mb-2">집행 관리</h2>
+                        <p class="text-neutral-600">예산 집행 요청 및 내역을 관리하세요</p>
+                    </div>
+
+                    <div class="bg-white rounded-2xl p-6 border border-neutral-200">
+                        <p class="text-center text-neutral-500 py-12">집행 관리 화면 (구현 예정)</p>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Approval Page -->
+            <div id="approval-page" class="page-content">
+                <div class="p-8">
+                    <div class="mb-8">
+                        <h2 class="text-2xl font-bold text-neutral-900 mb-2">결재</h2>
+                        <p class="text-neutral-600">품의서를 검토하고 결재하세요</p>
+                    </div>
+
+                    <div class="bg-white rounded-2xl p-6 border border-neutral-200">
+                        <p class="text-center text-neutral-500 py-12">결재 화면 (구현 예정)</p>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Analytics Page -->
+            <div id="analytics-page" class="page-content">
+                <div class="p-8">
+                    <div class="mb-8">
+                        <h2 class="text-2xl font-bold text-neutral-900 mb-2">분석 리포트</h2>
+                        <p class="text-neutral-600">AI 기반 예산 집행 분석 및 인사이트</p>
+                    </div>
+
+                    <div class="bg-white rounded-2xl p-6 border border-neutral-200">
+                        <p class="text-center text-neutral-500 py-12">분석 리포트 화면 (구현 예정)</p>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Simulation Page -->
+            <div id="simulation-page" class="page-content">
+                <div class="p-8">
+                    <div class="mb-8">
+                        <h2 class="text-2xl font-bold text-neutral-900 mb-2">시뮬레이션</h2>
+                        <p class="text-neutral-600">다양한 시나리오로 미래 재무 상황을 예측하세요</p>
+                    </div>
+
+                    <div class="bg-white rounded-2xl p-6 border border-neutral-200">
+                        <p class="text-center text-neutral-500 py-12">시뮬레이션 화면 (구현 예정)</p>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Users Page -->
+            <div id="users-page" class="page-content">
+                <div class="p-8">
+                    <div class="mb-8">
+                        <h2 class="text-2xl font-bold text-neutral-900 mb-2">사용자 관리</h2>
+                        <p class="text-neutral-600">시스템 사용자 및 권한을 관리하세요</p>
+                    </div>
+
+                    <div class="bg-white rounded-2xl p-6 border border-neutral-200">
+                        <p class="text-center text-neutral-500 py-12">사용자 관리 화면 (구현 예정)</p>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Settings Page -->
+            <div id="settings-page" class="page-content">
+                <div class="p-8">
+                    <div class="mb-8">
+                        <h2 class="text-2xl font-bold text-neutral-900 mb-2">시스템 설정</h2>
+                        <p class="text-neutral-600">시스템 환경을 설정하세요</p>
+                    </div>
+
+                    <div class="bg-white rounded-2xl p-6 border border-neutral-200">
+                        <p class="text-center text-neutral-500 py-12">시스템 설정 화면 (구현 예정)</p>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </main>
+
+    <script>
+        // Page Navigation Function
+        function showPage(pageId) {
+            console.log('Navigating to:', pageId);
+            
+            // Hide all pages
+            document.querySelectorAll('.page-content').forEach(page => {
+                page.classList.remove('active');
+            });
+            
+            // Show selected page
+            const targetPage = document.getElementById(pageId + '-page');
+            if (targetPage) {
+                targetPage.classList.add('active');
+            }
+            
+            // Update nav active state
+            document.querySelectorAll('.nav-link').forEach(link => {
+                link.classList.remove('nav-item-active');
+                link.classList.add('text-neutral-700', 'hover:bg-neutral-100');
+            });
+            
+            const activeLink = document.querySelector(`[data-page="${pageId}"]`);
+            if (activeLink) {
+                activeLink.classList.add('nav-item-active');
+                activeLink.classList.remove('text-neutral-700', 'hover:bg-neutral-100');
+            }
+            
+            // Scroll to top
+            window.scrollTo({ top: 0, behavior: 'smooth' });
+        }
+
+        // Keyboard shortcuts
+        document.addEventListener('keydown', function(e) {
+            if ((e.metaKey || e.ctrlKey) && e.key === 'k') {
+                e.preventDefault();
+                document.querySelector('input[type="text"]').focus();
+            }
+        });
+
+        // Initialize
+        document.addEventListener('DOMContentLoaded', function() {
+            console.log('XEM System Loaded Successfully');
+            console.log('Available pages: dashboard, projects, budget, execution, approval, analytics, simulation, users, settings');
+        });
+    </script>
+</body>
+</html>
