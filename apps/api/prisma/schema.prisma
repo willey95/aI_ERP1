@@ -1,0 +1,301 @@
+// This is your Prisma schema file,
+// learn more about it in the docs: https://pris.ly/d/prisma-schema
+
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+// ================== User & Auth Models ==================
+
+enum UserRole {
+  ADMIN
+  CFO
+  TEAM_LEAD
+  RM_TEAM
+  MANAGER
+  STAFF
+}
+
+model User {
+  id          String   @id @default(uuid())
+  email       String   @unique
+  password    String
+  name        String
+  department  String
+  role        UserRole @default(STAFF)
+  position    String
+  phoneNumber String?  @map("phone_number")
+  isActive    Boolean  @default(true) @map("is_active")
+  createdAt   DateTime @default(now()) @map("created_at")
+  updatedAt   DateTime @updatedAt @map("updated_at")
+
+  // Relations
+  createdProjects Project[]        @relation("ProjectCreator")
+  executions      Execution[]      @relation("ExecutionCreator")
+  approvals       ApprovalHistory[]
+
+  @@map("users")
+}
+
+// ================== Project Models ==================
+
+enum ProjectType {
+  SELF
+  SPC
+  JOINT
+  COOPERATIVE
+}
+
+enum ProjectStatus {
+  PLANNING
+  ACTIVE
+  COMPLETED
+  SUSPENDED
+}
+
+model Project {
+  id         String        @id @default(uuid())
+  name       String
+  type       ProjectType
+  status     ProjectStatus @default(PLANNING)
+  startDate  DateTime      @map("start_date")
+  endDate    DateTime      @map("end_date")
+  location   String
+  targetROI  Float         @map("target_roi")
+  riskScore  Int           @default(0) @map("risk_score")
+
+  // Scale information (stored as JSON)
+  totalArea  Float         @map("total_area")
+  units      Int
+  floors     Int
+
+  // Relations
+  createdBy  String        @map("created_by")
+  creator    User          @relation("ProjectCreator", fields: [createdBy], references: [id])
+
+  budgetItems BudgetItem[]
+  executions  Execution[]
+
+  createdAt  DateTime      @default(now()) @map("created_at")
+  updatedAt  DateTime      @updatedAt @map("updated_at")
+
+  @@map("projects")
+}
+
+// ================== Budget Models ==================
+
+enum BudgetCategory {
+  REVENUE
+  EXPENSE
+}
+
+enum BudgetItemType {
+  PRESALE       // 분양수입
+  RENTAL        // 임대수입
+  LAND          // 토지비
+  CONSTRUCTION  // 공사비
+  DESIGN        // 설계/감리
+  CONTRIBUTIONS // 부담금
+  FINANCE       // 금융비용
+  MARKETING     // 마케팅
+  OTHER         // 기타
+}
+
+model BudgetItem {
+  id              String          @id @default(uuid())
+  projectId       String          @map("project_id")
+  project         Project         @relation(fields: [projectId], references: [id], onDelete: Cascade)
+
+  category        BudgetCategory
+  type            BudgetItemType
+  name            String
+  code            String          // Budget code (e.g., "R-001", "E-001")
+
+  // For hierarchical structure
+  parentId        String?         @map("parent_id")
+  parent          BudgetItem?     @relation("BudgetHierarchy", fields: [parentId], references: [id])
+  children        BudgetItem[]    @relation("BudgetHierarchy")
+
+  initialAmount   Decimal         @map("initial_amount") @db.Decimal(20, 2)
+  currentAmount   Decimal         @map("current_amount") @db.Decimal(20, 2)
+  executedAmount  Decimal         @default(0) @map("executed_amount") @db.Decimal(20, 2)
+
+  description     String?
+
+  executions      Execution[]
+  changes         BudgetChange[]
+
+  createdAt       DateTime        @default(now()) @map("created_at")
+  updatedAt       DateTime        @updatedAt @map("updated_at")
+
+  @@unique([projectId, code])
+  @@map("budget_items")
+}
+
+model BudgetChange {
+  id             String      @id @default(uuid())
+  budgetItemId   String      @map("budget_item_id")
+  budgetItem     BudgetItem  @relation(fields: [budgetItemId], references: [id], onDelete: Cascade)
+
+  previousAmount Decimal     @map("previous_amount") @db.Decimal(20, 2)
+  newAmount      Decimal     @map("new_amount") @db.Decimal(20, 2)
+  changeAmount   Decimal     @map("change_amount") @db.Decimal(20, 2)
+  reason         String
+
+  approvedBy     String      @map("approved_by")
+  approvedAt     DateTime    @map("approved_at")
+
+  createdAt      DateTime    @default(now()) @map("created_at")
+
+  @@map("budget_changes")
+}
+
+// ================== Execution Models ==================
+
+enum ExecutionStatus {
+  DRAFT
+  SUBMITTED
+  APPROVED
+  REJECTED
+  CANCELLED
+}
+
+enum ApprovalStep {
+  MANAGER
+  TEAM_LEAD
+  RM_TEAM
+  CFO
+}
+
+model Execution {
+  id              String          @id @default(uuid())
+  executionNumber String          @unique @map("execution_number") // EXE-2024-0001
+
+  projectId       String          @map("project_id")
+  project         Project         @relation(fields: [projectId], references: [id])
+
+  budgetItemId    String          @map("budget_item_id")
+  budgetItem      BudgetItem      @relation(fields: [budgetItemId], references: [id])
+
+  amount          Decimal         @db.Decimal(20, 2)
+  executionDate   DateTime        @map("execution_date")
+  justification   String          @db.Text
+
+  status          ExecutionStatus @default(DRAFT)
+  currentStep     ApprovalStep?   @map("current_step")
+
+  createdBy       String          @map("created_by")
+  creator         User            @relation("ExecutionCreator", fields: [createdBy], references: [id])
+
+  attachments     Attachment[]
+  approvalHistory ApprovalHistory[]
+
+  createdAt       DateTime        @default(now()) @map("created_at")
+  updatedAt       DateTime        @updatedAt @map("updated_at")
+  submittedAt     DateTime?       @map("submitted_at")
+  approvedAt      DateTime?       @map("approved_at")
+  rejectedAt      DateTime?       @map("rejected_at")
+
+  @@map("executions")
+}
+
+model Attachment {
+  id          String    @id @default(uuid())
+  executionId String    @map("execution_id")
+  execution   Execution @relation(fields: [executionId], references: [id], onDelete: Cascade)
+
+  fileName    String    @map("file_name")
+  fileSize    Int       @map("file_size")
+  fileType    String    @map("file_type")
+  fileUrl     String    @map("file_url")
+
+  uploadedAt  DateTime  @default(now()) @map("uploaded_at")
+
+  @@map("attachments")
+}
+
+// ================== Approval Models ==================
+
+enum ApprovalAction {
+  APPROVED
+  REJECTED
+}
+
+model ApprovalHistory {
+  id          String          @id @default(uuid())
+  executionId String          @map("execution_id")
+  execution   Execution       @relation(fields: [executionId], references: [id], onDelete: Cascade)
+
+  step        ApprovalStep
+  action      ApprovalAction
+
+  approverId  String          @map("approver_id")
+  approver    User            @relation(fields: [approverId], references: [id])
+
+  comment     String?         @db.Text
+  timestamp   DateTime        @default(now())
+
+  @@map("approval_history")
+}
+
+// ================== Analytics & Cache Models ==================
+
+model CashFlowProjection {
+  id               String   @id @default(uuid())
+  projectId        String   @map("project_id")
+
+  month            DateTime
+  plannedRevenue   Decimal  @map("planned_revenue") @db.Decimal(20, 2)
+  plannedExpense   Decimal  @map("planned_expense") @db.Decimal(20, 2)
+  actualRevenue    Decimal  @default(0) @map("actual_revenue") @db.Decimal(20, 2)
+  actualExpense    Decimal  @default(0) @map("actual_expense") @db.Decimal(20, 2)
+
+  createdAt        DateTime @default(now()) @map("created_at")
+  updatedAt        DateTime @updatedAt @map("updated_at")
+
+  @@unique([projectId, month])
+  @@map("cashflow_projections")
+}
+
+model Simulation {
+  id              String   @id @default(uuid())
+  projectId       String   @map("project_id")
+
+  name            String
+  scenarioData    Json     @map("scenario_data") // Stores simulation parameters
+  resultData      Json     @map("result_data")   // Stores simulation results
+
+  createdBy       String   @map("created_by")
+  createdAt       DateTime @default(now()) @map("created_at")
+
+  @@map("simulations")
+}
+
+// ================== Notifications ==================
+
+enum NotificationType {
+  EXECUTION_SUBMITTED
+  EXECUTION_APPROVED
+  EXECUTION_REJECTED
+  BUDGET_ALERT
+  RISK_ALERT
+  SYSTEM
+}
+
+model Notification {
+  id        String            @id @default(uuid())
+  userId    String            @map("user_id")
+  type      NotificationType
+  title     String
+  message   String            @db.Text
+  data      Json?             // Additional data
+  isRead    Boolean           @default(false) @map("is_read")
+  createdAt DateTime          @default(now()) @map("created_at")
+
+  @@map("notifications")
+}
