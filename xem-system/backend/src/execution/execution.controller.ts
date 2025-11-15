@@ -11,6 +11,8 @@ import {
 import { JwtAuthGuard } from '../auth/jwt-auth.guard';
 import { ExecutionService } from './execution.service';
 import { CurrentUser } from '../auth/current-user.decorator';
+import { CreateExecutionRequestDto } from './dto/create-execution-request.dto';
+import { UpdateExecutionRequestDto } from './dto/update-execution-request.dto';
 
 @Controller('execution')
 @UseGuards(JwtAuthGuard)
@@ -28,13 +30,13 @@ export class ExecutionController {
   }
 
   @Post()
-  async create(@Body() data: any, @CurrentUser() user: any) {
-    return this.executionService.create(data, user.id);
+  async create(@Body() createExecutionRequestDto: CreateExecutionRequestDto, @CurrentUser() user: any) {
+    return this.executionService.create(createExecutionRequestDto, user.id);
   }
 
   @Put(':id')
-  async update(@Param('id') id: string, @Body() data: any) {
-    return this.executionService.update(id, data);
+  async update(@Param('id') id: string, @Body() updateExecutionRequestDto: UpdateExecutionRequestDto) {
+    return this.executionService.update(id, updateExecutionRequestDto);
   }
 
   @Post(':id/cancel')

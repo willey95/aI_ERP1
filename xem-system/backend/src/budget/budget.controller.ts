@@ -10,6 +10,8 @@ import {
 } from '@nestjs/common';
 import { JwtAuthGuard } from '../auth/jwt-auth.guard';
 import { BudgetService } from './budget.service';
+import { CreateBudgetItemDto } from './dto/create-budget-item.dto';
+import { UpdateBudgetItemDto } from './dto/update-budget-item.dto';
 
 @Controller('budget')
 @UseGuards(JwtAuthGuard)
@@ -27,13 +29,13 @@ export class BudgetController {
   }
 
   @Post()
-  async create(@Body() data: any) {
-    return this.budgetService.create(data);
+  async create(@Body() createBudgetItemDto: CreateBudgetItemDto) {
+    return this.budgetService.create(createBudgetItemDto);
   }
 
   @Put(':id')
-  async update(@Param('id') id: string, @Body() data: any) {
-    return this.budgetService.update(id, data);
+  async update(@Param('id') id: string, @Body() updateBudgetItemDto: UpdateBudgetItemDto) {
+    return this.budgetService.update(id, updateBudgetItemDto);
   }
 
   @Delete(':id')

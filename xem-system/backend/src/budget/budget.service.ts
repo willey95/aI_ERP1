@@ -175,7 +175,9 @@ export class BudgetService {
     );
 
     const remaining = totalBudget.minus(totalExecuted);
-    const executionRate = totalExecuted.dividedBy(totalBudget).times(100).toNumber();
+    const executionRate = totalBudget.isZero()
+      ? 0
+      : totalExecuted.dividedBy(totalBudget).times(100).toNumber();
 
     await this.prisma.project.update({
       where: { id: projectId },

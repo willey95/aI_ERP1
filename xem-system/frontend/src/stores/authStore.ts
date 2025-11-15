@@ -28,9 +28,7 @@ export const useAuthStore = create<AuthState>()(
 
           const { user, token } = response.data;
 
-          localStorage.setItem('xem_token', token);
-          localStorage.setItem('xem_user', JSON.stringify(user));
-
+          // Zustand persist middleware handles localStorage automatically
           set({
             user,
             token,
@@ -42,8 +40,7 @@ export const useAuthStore = create<AuthState>()(
       },
 
       logout: () => {
-        localStorage.removeItem('xem_token');
-        localStorage.removeItem('xem_user');
+        // Zustand persist middleware handles localStorage cleanup automatically
         set({
           user: null,
           token: null,
@@ -52,26 +49,17 @@ export const useAuthStore = create<AuthState>()(
       },
 
       checkAuth: async () => {
-        const token = localStorage.getItem('xem_token');
-        const userStr = localStorage.getItem('xem_user');
+        // No need to manually check localStorage - persist middleware handles this
+        // This function is kept for future API validation if needed
+        const state = useAuthStore.getState();
 
-        if (!token || !userStr) {
+        if (!state.token || !state.user) {
           set({ isAuthenticated: false });
           return;
         }
 
-        try {
-          const user = JSON.parse(userStr);
-          set({
-            user,
-            token,
-            isAuthenticated: true,
-          });
-        } catch (error) {
-          localStorage.removeItem('xem_token');
-          localStorage.removeItem('xem_user');
-          set({ isAuthenticated: false });
-        }
+        // State is already loaded from localStorage by persist middleware
+        set({ isAuthenticated: true });
       },
     }),
     {

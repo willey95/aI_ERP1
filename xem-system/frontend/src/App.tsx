@@ -5,6 +5,8 @@ import Layout from './components/Layout';
 import LoginPage from './pages/LoginPage';
 import DashboardPage from './pages/DashboardPage';
 import ProjectsPage from './pages/ProjectsPage';
+import ProjectNewPage from './pages/ProjectNewPage';
+import ProjectDetailPage from './pages/ProjectDetailPage';
 import BudgetPage from './pages/BudgetPage';
 import ExecutionsPage from './pages/ExecutionsPage';
 import ApprovalsPage from './pages/ApprovalsPage';
@@ -44,6 +46,22 @@ function App() {
           element={
             <ProtectedRoute>
               <ProjectsPage />
+            </ProtectedRoute>
+          }
+        />
+        <Route
+          path="/projects/new"
+          element={
+            <ProtectedRoute>
+              <ProjectNewPage />
+            </ProtectedRoute>
+          }
+        />
+        <Route
+          path="/projects/:id"
+          element={
+            <ProtectedRoute>
+              <ProjectDetailPage />
             </ProtectedRoute>
           }
         />

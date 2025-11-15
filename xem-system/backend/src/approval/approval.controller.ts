@@ -9,6 +9,8 @@ import {
 import { JwtAuthGuard } from '../auth/jwt-auth.guard';
 import { ApprovalService } from './approval.service';
 import { CurrentUser } from '../auth/current-user.decorator';
+import { ApproveDto } from './dto/approve.dto';
+import { RejectDto } from './dto/reject.dto';
 
 @Controller('approval')
 @UseGuards(JwtAuthGuard)
@@ -23,18 +25,18 @@ export class ApprovalController {
   @Post(':id/approve')
   async approve(
     @Param('id') id: string,
-    @Body() body: { decision?: string },
+    @Body() approveDto: ApproveDto,
     @CurrentUser() user: any,
   ) {
-    return this.approvalService.approve(id, user.id, body.decision);
+    return this.approvalService.approve(id, user.id, approveDto.decision);
   }
 
   @Post(':id/reject')
   async reject(
     @Param('id') id: string,
-    @Body() body: { reason: string },
+    @Body() rejectDto: RejectDto,
     @CurrentUser() user: any,
   ) {
-    return this.approvalService.reject(id, user.id, body.reason);
+    return this.approvalService.reject(id, user.id, rejectDto.reason);
   }
 }

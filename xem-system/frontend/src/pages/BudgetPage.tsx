@@ -127,7 +127,9 @@ export default function BudgetPage() {
                   }),
                   { budget: 0, executed: 0, remaining: 0 }
                 );
-                const categoryRate = (categoryTotal.executed / categoryTotal.budget) * 100;
+                const categoryRate = categoryTotal.budget === 0
+                  ? 0
+                  : (categoryTotal.executed / categoryTotal.budget) * 100;
 
                 return (
                   <div key={category} className="bg-white rounded-lg shadow overflow-hidden">

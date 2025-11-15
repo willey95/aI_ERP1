@@ -74,14 +74,14 @@ model Project {
   salesStartDate    DateTime?
 
   // Financial Summary (실시간 계산됨)
-  initialBudget     Decimal       @db.Decimal(15, 2) // 최초 예산
-  currentBudget     Decimal       @db.Decimal(15, 2) // 현재 예산
-  executedAmount    Decimal       @db.Decimal(15, 2) @default(0) // 집행액
-  remainingBudget   Decimal       @db.Decimal(15, 2) // 잔액
+  initialBudget     Decimal       @db.Decimal(20, 2) // 최초 예산
+  currentBudget     Decimal       @db.Decimal(20, 2) // 현재 예산
+  executedAmount    Decimal       @db.Decimal(20, 2) @default(0) // 집행액
+  remainingBudget   Decimal       @db.Decimal(20, 2) // 잔액
   executionRate     Float         @default(0) // 집행률 (%)
 
   // ROI & Risk
-  expectedProfit    Decimal       @db.Decimal(15, 2) // 예상 이익
+  expectedProfit    Decimal       @db.Decimal(20, 2) // 예상 이익
   roi               Float         @default(0) // ROI (%)
   riskScore         Int           @default(0) // 리스크 점수 (0-100)
 
@@ -104,6 +104,7 @@ model Project {
   @@index([code])
   @@index([status])
   @@index([projectType])
+  @@index([createdById])
   @@map("projects")
 }
 
@@ -132,6 +133,8 @@ model ProjectMember {
   user        User     @relation(fields: [userId], references: [id], onDelete: Cascade)
 
   @@unique([projectId, userId])
+  @@index([userId])
+  @@index([projectId])
   @@map("project_members")
 }
 
@@ -149,10 +152,10 @@ model BudgetItem {
   subItem           String?     // 소분류: 세부 항목
 
   // Budget Amounts
-  initialBudget     Decimal     @db.Decimal(15, 2) // 최초 예산
-  currentBudget     Decimal     @db.Decimal(15, 2) // 변경 예산
-  executedAmount    Decimal     @db.Decimal(15, 2) @default(0) // 집행액
-  remainingBudget   Decimal     @db.Decimal(15, 2) // 잔액
+  initialBudget     Decimal     @db.Decimal(20, 2) // 최초 예산
+  currentBudget     Decimal     @db.Decimal(20, 2) // 변경 예산
+  executedAmount    Decimal     @db.Decimal(20, 2) @default(0) // 집행액
+  remainingBudget   Decimal     @db.Decimal(20, 2) // 잔액
   executionRate     Float       @default(0) // 집행률
 
   // Change History
@@ -171,6 +174,7 @@ model BudgetItem {
 
   @@index([projectId])
   @@index([category])
+  @@index([projectId, isActive])
   @@map("budget_items")
 }
 
@@ -188,7 +192,7 @@ model ExecutionRequest {
   requestedById     String
 
   // Amounts
-  amount            Decimal           @db.Decimal(15, 2)
+  amount            Decimal           @db.Decimal(20, 2)
   executionDate     DateTime          // 집행 예정일
 
   // Details
@@ -215,6 +219,9 @@ model ExecutionRequest {
   @@index([requestNumber])
   @@index([status])
   @@index([projectId])
+  @@index([budgetItemId])
+  @@index([requestedById])
+  @@index([status, currentStep])
   @@map("execution_requests")
 }
 
@@ -249,6 +256,10 @@ model Approval {
 
   @@unique([executionRequestId, step])
   @@index([status])
+  @@index([approverRole])
+  @@index([approverId])
+  @@index([executionRequestId])
+  @@index([approverRole, status])
   @@map("approvals")
 }
 
@@ -273,8 +284,8 @@ model CashFlowItem {
   description String?
 
   // Amounts
-  plannedAmount   Decimal   @db.Decimal(15, 2) // 계획액
-  actualAmount    Decimal   @db.Decimal(15, 2) @default(0) // 실제액
+  plannedAmount   Decimal   @db.Decimal(20, 2) // 계획액
+  actualAmount    Decimal   @db.Decimal(20, 2) @default(0) // 실제액
 
   // Dates
   plannedDate     DateTime  // 계획일
@@ -291,6 +302,7 @@ model CashFlowItem {
 
   @@index([projectId])
   @@index([plannedDate])
+  @@index([type])
   @@map("cash_flow_items")
 }
 
@@ -320,11 +332,11 @@ model FinancialModel {
 
   // Calculated Results (JSON 저장)
   monthlyProjections  Json     // 월별 예상 현금흐름
-  totalRevenue        Decimal  @db.Decimal(15, 2)
-  totalCost           Decimal  @db.Decimal(15, 2)
-  expectedProfit      Decimal  @db.Decimal(15, 2)
+  totalRevenue        Decimal  @db.Decimal(20, 2)
+  totalCost           Decimal  @db.Decimal(20, 2)
+  expectedProfit      Decimal  @db.Decimal(20, 2)
   roi                 Float
-  lowestCashPoint     Decimal  @db.Decimal(15, 2) // 최저 현금 시점
+  lowestCashPoint     Decimal  @db.Decimal(20, 2) // 최저 현금 시점
   lowestCashMonth     Int      // 최저 현금 발생 월
 
   // Metadata
@@ -336,6 +348,7 @@ model FinancialModel {
 
   @@index([projectId])
   @@index([version])
+  @@index([projectId, isActive])
   @@map("financial_models")
 }
 
@@ -351,9 +364,9 @@ model Simulation {
   interestChange  Float    @default(0) // 금리 변동 (%p)
 
   // Results
-  projectedProfit Decimal  @db.Decimal(15, 2)
+  projectedProfit Decimal  @db.Decimal(20, 2)
   projectedROI    Float
-  lowestCash      Decimal  @db.Decimal(15, 2)
+  lowestCash      Decimal  @db.Decimal(20, 2)
   lowestCashMonth Int
   recommendations Json     // AI 추천사항
 
@@ -395,6 +408,7 @@ model Notification {
 
   @@index([userId, isRead])
   @@index([createdAt])
+  @@index([projectId])
   @@map("notifications")
 }
 
