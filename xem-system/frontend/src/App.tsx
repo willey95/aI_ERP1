@@ -1,5 +1,5 @@
 import { useEffect } from 'react';
-import { BrowserRouter, Routes, Route, Navigate } from 'react-router-dom';
+import { BrowserRouter, Routes, Route, Navigate, useNavigate } from 'react-router-dom';
 import { useAuthStore } from './stores/authStore';
 import Layout from './components/Layout';
 import LoginPage from './pages/LoginPage';
@@ -22,6 +22,23 @@ function ProtectedRoute({ children }: { children: React.ReactNode }) {
   return <Layout>{children}</Layout>;
 }
 
+function AuthUnauthorizedHandler() {
+  const navigate = useNavigate();
+  const logout = useAuthStore((state) => state.logout);
+
+  useEffect(() => {
+    const handleUnauthorized = () => {
+      logout();
+      navigate('/login', { replace: true });
+    };
+
+    window.addEventListener('auth:unauthorized', handleUnauthorized);
+    return () => window.removeEventListener('auth:unauthorized', handleUnauthorized);
+  }, [logout, navigate]);
+
+  return null;
+}
+
 function App() {
   const checkAuth = useAuthStore((state) => state.checkAuth);
 
@@ -31,6 +48,7 @@ function App() {
 
   return (
     <BrowserRouter>
+      <AuthUnauthorizedHandler />
       <Routes>
         <Route path="/login" element={<LoginPage />} />
         <Route

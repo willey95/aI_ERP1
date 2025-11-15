@@ -22,9 +22,9 @@ api.interceptors.response.use(
   (response) => response,
   (error) => {
     if (error.response?.status === 401) {
-      localStorage.removeItem('xem_token');
-      localStorage.removeItem('xem_user');
-      window.location.href = '/login';
+      // Dispatch custom event instead of hard redirect
+      // This preserves SPA navigation
+      window.dispatchEvent(new CustomEvent('auth:unauthorized'));
     }
     return Promise.reject(error);
   }
