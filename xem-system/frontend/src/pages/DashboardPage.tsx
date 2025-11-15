@@ -26,11 +26,10 @@ export default function DashboardPage() {
   const stats = data?.stats || {};
 
   return (
-    <div className="p-8">
-      {/* Header */}
+    <div>
+      {/* Welcome Message */}
       <div className="mb-8">
-        <h1 className="text-3xl font-bold text-gray-900">Dashboard</h1>
-        <p className="mt-2 text-gray-600">Welcome back, {user?.name}!</p>
+        <p className="text-lg text-gray-600">Welcome back, {user?.name}!</p>
       </div>
 
       {/* KPI Cards */}
