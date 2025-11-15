@@ -1,0 +1,442 @@
+// This is your Prisma schema file
+// XEM System v3.1 - Complete Database Schema
+
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+// ============================================
+// 1. AUTHENTICATION & USER MANAGEMENT
+// ============================================
+
+model User {
+  id            String   @id @default(uuid())
+  email         String   @unique
+  password      String   // bcrypt hashed
+  name          String
+  role          UserRole @default(STAFF)
+  department    String?
+  position      String?
+  phone         String?
+  isActive      Boolean  @default(true)
+  createdAt     DateTime @default(now())
+  updatedAt     DateTime @updatedAt
+  lastLoginAt   DateTime?
+
+  // Relations
+  createdProjects      Project[]       @relation("ProjectCreator")
+  assignedProjects     ProjectMember[]
+  executionRequests    ExecutionRequest[] @relation("ExecutionRequestor")
+  approvals            Approval[]
+  notifications        Notification[]
+  activityLogs         ActivityLog[]
+
+  @@index([email])
+  @@index([role])
+  @@map("users")
+}
+
+enum UserRole {
+  ADMIN      // 시스템 관리자
+  CFO        // 재무총괄
+  RM_TEAM    // RM팀
+  TEAM_LEAD  // 팀장
+  STAFF      // 담당자
+  VIEWER     // 읽기 전용
+}
+
+// ============================================
+// 2. PROJECT MANAGEMENT
+// ============================================
+
+model Project {
+  id                String        @id @default(uuid())
+  code              String        @unique // 프로젝트 코드 (예: PRJ-2024-001)
+  name              String
+  location          String
+  projectType       ProjectType
+  status            ProjectStatus @default(PLANNING)
+
+  // Basic Info
+  landArea          Float         // 대지면적 (m²)
+  buildingArea      Float         // 건축면적 (m²)
+  totalFloorArea    Float         // 연면적 (m²)
+  units             Int           // 세대수
+
+  // Dates
+  startDate         DateTime?
+  completionDate    DateTime?
+  salesStartDate    DateTime?
+
+  // Financial Summary (실시간 계산됨)
+  initialBudget     Decimal       @db.Decimal(15, 2) // 최초 예산
+  currentBudget     Decimal       @db.Decimal(15, 2) // 현재 예산
+  executedAmount    Decimal       @db.Decimal(15, 2) @default(0) // 집행액
+  remainingBudget   Decimal       @db.Decimal(15, 2) // 잔액
+  executionRate     Float         @default(0) // 집행률 (%)
+
+  // ROI & Risk
+  expectedProfit    Decimal       @db.Decimal(15, 2) // 예상 이익
+  roi               Float         @default(0) // ROI (%)
+  riskScore         Int           @default(0) // 리스크 점수 (0-100)
+
+  // Metadata
+  createdById       String
+  createdAt         DateTime      @default(now())
+  updatedAt         DateTime      @updatedAt
+
+  // Relations
+  creator           User          @relation("ProjectCreator", fields: [createdById], references: [id])
+  members           ProjectMember[]
+  budgetItems       BudgetItem[]
+  executionRequests ExecutionRequest[]
+  cashFlowItems     CashFlowItem[]
+  simulations       Simulation[]
+  financialModels   FinancialModel[]
+  notifications     Notification[]
+  activityLogs      ActivityLog[]
+
+  @@index([code])
+  @@index([status])
+  @@index([projectType])
+  @@map("projects")
+}
+
+enum ProjectType {
+  SELF        // 자체사업
+  SPC         // SPC사업
+  JOINT       // 공동사업
+  COOPERATIVE // 협력사업
+}
+
+enum ProjectStatus {
+  PLANNING    // 기획중
+  ACTIVE      // 진행중
+  COMPLETED   // 완료
+  SUSPENDED   // 중단
+}
+
+model ProjectMember {
+  id          String   @id @default(uuid())
+  projectId   String
+  userId      String
+  role        String   // 프로젝트 내 역할
+  joinedAt    DateTime @default(now())
+
+  project     Project  @relation(fields: [projectId], references: [id], onDelete: Cascade)
+  user        User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@unique([projectId, userId])
+  @@map("project_members")
+}
+
+// ============================================
+// 3. BUDGET MANAGEMENT
+// ============================================
+
+model BudgetItem {
+  id                String      @id @default(uuid())
+  projectId         String
+
+  // Hierarchy (3-level)
+  category          String      // 대분류: 수입/지출
+  mainItem          String      // 중분류: 토지비, 공사비, 분양수입 등
+  subItem           String?     // 소분류: 세부 항목
+
+  // Budget Amounts
+  initialBudget     Decimal     @db.Decimal(15, 2) // 최초 예산
+  currentBudget     Decimal     @db.Decimal(15, 2) // 변경 예산
+  executedAmount    Decimal     @db.Decimal(15, 2) @default(0) // 집행액
+  remainingBudget   Decimal     @db.Decimal(15, 2) // 잔액
+  executionRate     Float       @default(0) // 집행률
+
+  // Change History
+  changeReason      String?     // 변경 사유
+  changedAt         DateTime?   // 변경일
+
+  // Metadata
+  displayOrder      Int         @default(0) // 표시 순서
+  isActive          Boolean     @default(true)
+  createdAt         DateTime    @default(now())
+  updatedAt         DateTime    @updatedAt
+
+  // Relations
+  project           Project     @relation(fields: [projectId], references: [id], onDelete: Cascade)
+  executionRequests ExecutionRequest[]
+
+  @@index([projectId])
+  @@index([category])
+  @@map("budget_items")
+}
+
+// ============================================
+// 4. EXECUTION & APPROVAL WORKFLOW
+// ============================================
+
+model ExecutionRequest {
+  id                String            @id @default(uuid())
+  requestNumber     String            @unique // 품의번호 (예: EXE-2024-001)
+
+  // Basic Info
+  projectId         String
+  budgetItemId      String
+  requestedById     String
+
+  // Amounts
+  amount            Decimal           @db.Decimal(15, 2)
+  executionDate     DateTime          // 집행 예정일
+
+  // Details
+  purpose           String            @db.Text // 집행 사유
+  description       String?           @db.Text
+  attachments       String[]          // File URLs
+
+  // Status
+  status            ExecutionStatus   @default(DRAFT)
+  currentStep       Int               @default(0) // 현재 결재 단계
+  rejectionReason   String?           @db.Text
+
+  // Metadata
+  createdAt         DateTime          @default(now())
+  updatedAt         DateTime          @updatedAt
+  completedAt       DateTime?
+
+  // Relations
+  project           Project           @relation(fields: [projectId], references: [id], onDelete: Cascade)
+  budgetItem        BudgetItem        @relation(fields: [budgetItemId], references: [id])
+  requestedBy       User              @relation("ExecutionRequestor", fields: [requestedById], references: [id])
+  approvals         Approval[]
+
+  @@index([requestNumber])
+  @@index([status])
+  @@index([projectId])
+  @@map("execution_requests")
+}
+
+enum ExecutionStatus {
+  DRAFT           // 작성중
+  PENDING         // 승인대기
+  APPROVED        // 승인완료
+  REJECTED        // 반려
+  CANCELLED       // 취소
+}
+
+model Approval {
+  id                String            @id @default(uuid())
+  executionRequestId String
+
+  // Approval Info
+  step              Int               // 결재 단계 (1: 담당자, 2: 팀장, 3: RM팀, 4: CFO)
+  approverRole      UserRole
+  approverId        String?           // Nullable because not assigned yet
+
+  // Status
+  status            ApprovalStatus    @default(PENDING)
+  decision          String?           @db.Text // 승인/반려 의견
+  decidedAt         DateTime?
+
+  createdAt         DateTime          @default(now())
+  updatedAt         DateTime          @updatedAt
+
+  // Relations
+  executionRequest  ExecutionRequest  @relation(fields: [executionRequestId], references: [id], onDelete: Cascade)
+  approver          User?             @relation(fields: [approverId], references: [id])
+
+  @@unique([executionRequestId, step])
+  @@index([status])
+  @@map("approvals")
+}
+
+enum ApprovalStatus {
+  PENDING   // 대기중
+  APPROVED  // 승인
+  REJECTED  // 반려
+  SKIPPED   // 생략
+}
+
+// ============================================
+// 5. CASH FLOW MANAGEMENT
+// ============================================
+
+model CashFlowItem {
+  id          String        @id @default(uuid())
+  projectId   String
+
+  // Classification
+  type        CashFlowType  // INFLOW or OUTFLOW
+  category    String        // 수입: 분양수입, 지출: 토지비 등
+  description String?
+
+  // Amounts
+  plannedAmount   Decimal   @db.Decimal(15, 2) // 계획액
+  actualAmount    Decimal   @db.Decimal(15, 2) @default(0) // 실제액
+
+  // Dates
+  plannedDate     DateTime  // 계획일
+  actualDate      DateTime? // 실제 발생일
+
+  // Metadata
+  isRecurring     Boolean   @default(false) // 반복 여부
+  recurringMonths Int?      // 반복 개월수
+  createdAt       DateTime  @default(now())
+  updatedAt       DateTime  @updatedAt
+
+  // Relations
+  project     Project   @relation(fields: [projectId], references: [id], onDelete: Cascade)
+
+  @@index([projectId])
+  @@index([plannedDate])
+  @@map("cash_flow_items")
+}
+
+enum CashFlowType {
+  INFLOW   // 수입
+  OUTFLOW  // 지출
+}
+
+// ============================================
+// 6. FINANCIAL MODEL & SIMULATION
+// ============================================
+
+model FinancialModel {
+  id          String   @id @default(uuid())
+  projectId   String
+
+  // Model Version
+  version     Int      // 버전 번호 (집행 시마다 증가)
+  isActive    Boolean  @default(true) // 현재 활성 모델
+
+  // Assumptions
+  salesRate           Float    // 분양률 (%)
+  salesStartMonth     Int      // 분양 시작 개월
+  constructionDelay   Int      @default(0) // 공사 지연 개월
+  costInflation       Float    @default(0) // 공사비 인상률 (%)
+  interestRate        Float    // 금리 (%)
+
+  // Calculated Results (JSON 저장)
+  monthlyProjections  Json     // 월별 예상 현금흐름
+  totalRevenue        Decimal  @db.Decimal(15, 2)
+  totalCost           Decimal  @db.Decimal(15, 2)
+  expectedProfit      Decimal  @db.Decimal(15, 2)
+  roi                 Float
+  lowestCashPoint     Decimal  @db.Decimal(15, 2) // 최저 현금 시점
+  lowestCashMonth     Int      // 최저 현금 발생 월
+
+  // Metadata
+  calculatedAt DateTime @default(now())
+  calculatedBy String? // User ID who triggered calculation
+
+  // Relations
+  project     Project  @relation(fields: [projectId], references: [id], onDelete: Cascade)
+
+  @@index([projectId])
+  @@index([version])
+  @@map("financial_models")
+}
+
+model Simulation {
+  id          String   @id @default(uuid())
+  projectId   String
+  name        String   // 시나리오 이름
+
+  // Scenario Parameters
+  salesDelay      Int      @default(0) // 분양 지연 (개월)
+  salesRate       Float    // 분양률 (%)
+  costChange      Float    @default(0) // 공사비 변동 (%)
+  interestChange  Float    @default(0) // 금리 변동 (%p)
+
+  // Results
+  projectedProfit Decimal  @db.Decimal(15, 2)
+  projectedROI    Float
+  lowestCash      Decimal  @db.Decimal(15, 2)
+  lowestCashMonth Int
+  recommendations Json     // AI 추천사항
+
+  // Metadata
+  createdAt   DateTime @default(now())
+  createdBy   String?
+
+  // Relations
+  project     Project  @relation(fields: [projectId], references: [id], onDelete: Cascade)
+
+  @@index([projectId])
+  @@map("simulations")
+}
+
+// ============================================
+// 7. NOTIFICATIONS & ACTIVITY LOGS
+// ============================================
+
+model Notification {
+  id          String           @id @default(uuid())
+  userId      String
+  projectId   String?
+
+  type        NotificationType
+  title       String
+  message     String           @db.Text
+  severity    NotificationSeverity @default(INFO)
+
+  isRead      Boolean          @default(false)
+  readAt      DateTime?
+
+  // Metadata
+  metadata    Json?            // Additional data
+  createdAt   DateTime         @default(now())
+
+  // Relations
+  user        User             @relation(fields: [userId], references: [id], onDelete: Cascade)
+  project     Project?         @relation(fields: [projectId], references: [id], onDelete: Cascade)
+
+  @@index([userId, isRead])
+  @@index([createdAt])
+  @@map("notifications")
+}
+
+enum NotificationType {
+  EXECUTION_RATE_WARNING  // 집행률 경고
+  APPROVAL_REQUEST        // 결재 요청
+  APPROVAL_COMPLETED      // 결재 완료
+  APPROVAL_REJECTED       // 결재 반려
+  BUDGET_CHANGE           // 예산 변경
+  RISK_ALERT              // 리스크 알림
+  SYSTEM                  // 시스템 알림
+}
+
+enum NotificationSeverity {
+  INFO     // 정보
+  WARNING  // 주의
+  DANGER   // 위험
+  CRITICAL // 긴급
+}
+
+model ActivityLog {
+  id          String   @id @default(uuid())
+  userId      String
+  projectId   String?
+
+  action      String   // 액션 종류
+  entity      String   // 대상 엔티티
+  entityId    String   // 대상 ID
+  description String   @db.Text
+  metadata    Json?    // 상세 데이터
+
+  ipAddress   String?
+  userAgent   String?
+
+  createdAt   DateTime @default(now())
+
+  // Relations
+  user        User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  project     Project? @relation(fields: [projectId], references: [id], onDelete: Cascade)
+
+  @@index([userId])
+  @@index([projectId])
+  @@index([createdAt])
+  @@map("activity_logs")
+}
