@@ -8,6 +8,8 @@ import ProjectsPage from './pages/ProjectsPage';
 import ProjectNewPage from './pages/ProjectNewPage';
 import ProjectDetailPage from './pages/ProjectDetailPage';
 import BudgetPage from './pages/BudgetPage';
+import BudgetManagementPage from './pages/BudgetManagementPage';
+import BudgetTransferPage from './pages/BudgetTransferPage';
 import ExecutionsPage from './pages/ExecutionsPage';
 import ExecutionRequestCreatePage from './pages/ExecutionRequestCreatePage';
 import ApprovalsPage from './pages/ApprovalsPage';
@@ -90,6 +92,22 @@ function App() {
           element={
             <ProtectedRoute>
               <BudgetPage />
+            </ProtectedRoute>
+          }
+        />
+        <Route
+          path="/budget/manage"
+          element={
+            <ProtectedRoute>
+              <BudgetManagementPage />
+            </ProtectedRoute>
+          }
+        />
+        <Route
+          path="/budget/transfers"
+          element={
+            <ProtectedRoute>
+              <BudgetTransferPage />
             </ProtectedRoute>
           }
         />
