@@ -8,6 +8,7 @@ async function main() {
   console.log('🌱 Starting seed...');
 
   // Clear existing data
+  await prisma.budgetTransfer.deleteMany();
   await prisma.approval.deleteMany();
   await prisma.executionRequest.deleteMany();
   await prisma.budgetItem.deleteMany();
@@ -97,7 +98,31 @@ async function main() {
     },
   });
 
-  console.log('✅ Created 6 users');
+  const approver1 = await prisma.user.create({
+    data: {
+      email: 'approver1@xem.com',
+      password,
+      name: '한승인',
+      role: 'APPROVER',
+      department: '재무본부',
+      position: 'Approver',
+      isActive: true,
+    },
+  });
+
+  const approver2 = await prisma.user.create({
+    data: {
+      email: 'approver2@xem.com',
+      password,
+      name: '오권한',
+      role: 'APPROVER',
+      department: '관리본부',
+      position: 'Senior Approver',
+      isActive: true,
+    },
+  });
+
+  console.log('✅ Created 8 users (including 2 APPROVER roles)');
 
   // Create projects
   const project1 = await prisma.project.create({
@@ -269,12 +294,12 @@ async function main() {
         purpose: '지하 주차장 공사 중간 대금',
         description: '1차 진행분에 대한 기성 대금 지급',
         status: 'PENDING',
-        currentStep: 1,
+        currentStep: 2, // 2단계 워크플로우: STAFF 자동 승인 후 APPROVER 대기
         attachments: [],
       },
     });
 
-    // Create approval steps
+    // Create approval steps (2-step workflow: STAFF → APPROVER)
     await prisma.approval.createMany({
       data: [
         {
@@ -289,35 +314,115 @@ async function main() {
         {
           executionRequestId: executionRequest.id,
           step: 2,
-          approverRole: 'TEAM_LEAD',
-          status: 'PENDING',
-        },
-        {
-          executionRequestId: executionRequest.id,
-          step: 3,
-          approverRole: 'RM_TEAM',
-          status: 'PENDING',
-        },
-        {
-          executionRequestId: executionRequest.id,
-          step: 4,
-          approverRole: 'CFO',
+          approverRole: 'APPROVER',
           status: 'PENDING',
         },
       ],
     });
 
-    console.log('✅ Created sample execution request with approvals');
+    console.log('✅ Created sample execution request with 2-step approval workflow');
+  }
+
+  // Create budget transfer sample data
+  const sourceBudgetItem = await prisma.budgetItem.findFirst({
+    where: {
+      projectId: project1.id,
+      mainItem: '공사비',
+      subItem: '건축공사',
+    },
+  });
+
+  const targetBudgetItem = await prisma.budgetItem.findFirst({
+    where: {
+      projectId: project1.id,
+      mainItem: '공사비',
+      subItem: '토목공사',
+    },
+  });
+
+  if (sourceBudgetItem && targetBudgetItem) {
+    // 승인된 예산 전용
+    const transfer1 = await prisma.budgetTransfer.create({
+      data: {
+        sourceItemId: sourceBudgetItem.id,
+        targetItemId: targetBudgetItem.id,
+        amount: new Decimal(200000000), // 2억원
+        transferType: 'PARTIAL',
+        reason: '토목공사 예산 부족으로 인한 건축공사 예산 전용',
+        description: '지하 주차장 추가 공사로 인한 예산 부족 발생',
+        status: 'APPROVED',
+        createdById: staff1.id,
+        approvedById: approver1.id,
+        approvedAt: new Date('2024-11-20'),
+      },
+    });
+
+    // Update budget items to reflect the approved transfer
+    await prisma.budgetItem.update({
+      where: { id: sourceBudgetItem.id },
+      data: {
+        currentBudget: sourceBudgetItem.currentBudget.minus(new Decimal(200000000)),
+        remainingBudget: sourceBudgetItem.remainingBudget.minus(new Decimal(200000000)),
+        executionRate: sourceBudgetItem.currentBudget.minus(new Decimal(200000000)).equals(0)
+          ? 0
+          : sourceBudgetItem.executedAmount
+              .dividedBy(sourceBudgetItem.currentBudget.minus(new Decimal(200000000)))
+              .times(100)
+              .toNumber(),
+        changeReason: `예산 전용: 200,000,000원 전출 (전용 ID: ${transfer1.id})`,
+        changedAt: new Date('2024-11-20'),
+      },
+    });
+
+    await prisma.budgetItem.update({
+      where: { id: targetBudgetItem.id },
+      data: {
+        currentBudget: targetBudgetItem.currentBudget.plus(new Decimal(200000000)),
+        remainingBudget: targetBudgetItem.remainingBudget.plus(new Decimal(200000000)),
+        executionRate: targetBudgetItem.currentBudget.plus(new Decimal(200000000)).equals(0)
+          ? 0
+          : targetBudgetItem.executedAmount
+              .dividedBy(targetBudgetItem.currentBudget.plus(new Decimal(200000000)))
+              .times(100)
+              .toNumber(),
+        changeReason: `예산 전용: 200,000,000원 전입 (전용 ID: ${transfer1.id})`,
+        changedAt: new Date('2024-11-20'),
+      },
+    });
+
+    // 대기 중인 예산 전용
+    await prisma.budgetTransfer.create({
+      data: {
+        sourceItemId: sourceBudgetItem.id,
+        targetItemId: targetBudgetItem.id,
+        amount: new Decimal(100000000), // 1억원
+        transferType: 'PARTIAL',
+        reason: '추가 토목공사 예산 확보',
+        description: '우기 대비 배수 시설 추가 공사',
+        status: 'PENDING',
+        createdById: staff2.id,
+      },
+    });
+
+    console.log('✅ Created sample budget transfers (1 approved, 1 pending)');
   }
 
   console.log('\n✅ Seed completed successfully!\n');
   console.log('📧 Test accounts:');
-  console.log('   admin@xem.com / password123');
-  console.log('   cfo@xem.com / password123');
-  console.log('   rm@xem.com / password123');
-  console.log('   teamlead@xem.com / password123');
-  console.log('   staff1@xem.com / password123');
-  console.log('   staff2@xem.com / password123');
+  console.log('   admin@xem.com / password123 (ADMIN)');
+  console.log('   cfo@xem.com / password123 (CFO)');
+  console.log('   rm@xem.com / password123 (RM_TEAM)');
+  console.log('   teamlead@xem.com / password123 (TEAM_LEAD)');
+  console.log('   approver1@xem.com / password123 (APPROVER) 👈 NEW');
+  console.log('   approver2@xem.com / password123 (APPROVER) 👈 NEW');
+  console.log('   staff1@xem.com / password123 (STAFF)');
+  console.log('   staff2@xem.com / password123 (STAFF)');
+  console.log('\n📊 Sample data:');
+  console.log('   - 2 Projects');
+  console.log('   - Budget items with execution history');
+  console.log('   - 1 Pending execution request (EXE-2024-0001)');
+  console.log('   - 1 Approved budget transfer + 1 Pending transfer');
+  console.log('   - 2-step approval workflow: STAFF → APPROVER');
 }
 
 main()

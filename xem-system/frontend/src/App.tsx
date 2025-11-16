@@ -9,7 +9,9 @@ import ProjectNewPage from './pages/ProjectNewPage';
 import ProjectDetailPage from './pages/ProjectDetailPage';
 import BudgetPage from './pages/BudgetPage';
 import ExecutionsPage from './pages/ExecutionsPage';
+import ExecutionRequestCreatePage from './pages/ExecutionRequestCreatePage';
 import ApprovalsPage from './pages/ApprovalsPage';
+import ApproverDashboardPage from './pages/ApproverDashboardPage';
 import ReportsPage from './pages/ReportsPage';
 
 function ProtectedRoute({ children }: { children: React.ReactNode }) {
@@ -100,10 +102,26 @@ function App() {
           }
         />
         <Route
+          path="/executions/new"
+          element={
+            <ProtectedRoute>
+              <ExecutionRequestCreatePage />
+            </ProtectedRoute>
+          }
+        />
+        <Route
           path="/approvals"
           element={
             <ProtectedRoute>
               <ApprovalsPage />
+            </ProtectedRoute>
+          }
+        />
+        <Route
+          path="/approvals/review/:executionRequestId"
+          element={
+            <ProtectedRoute>
+              <ApproverDashboardPage />
             </ProtectedRoute>
           }
         />
