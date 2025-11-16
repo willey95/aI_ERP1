@@ -14,7 +14,7 @@ interface AuthState {
 
 export const useAuthStore = create<AuthState>()(
   persist(
-    (set) => ({
+    (set, get) => ({
       user: null,
       token: null,
       isAuthenticated: false,
@@ -70,6 +70,12 @@ export const useAuthStore = create<AuthState>()(
     }),
     {
       name: 'xem-auth',
+      onRehydrateStorage: () => (state) => {
+        // When zustand restores state from localStorage, also set token in localStorage
+        if (state?.token) {
+          localStorage.setItem('xem_token', state.token);
+        }
+      },
     }
   )
 );
