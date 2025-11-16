@@ -28,6 +28,9 @@ export const useAuthStore = create<AuthState>()(
 
           const { user, token } = response.data;
 
+          // Store token in localStorage for API interceptor
+          localStorage.setItem('xem_token', token);
+
           // Zustand persist middleware handles localStorage automatically
           set({
             user,
@@ -40,6 +43,9 @@ export const useAuthStore = create<AuthState>()(
       },
 
       logout: () => {
+        // Remove token from localStorage
+        localStorage.removeItem('xem_token');
+
         // Zustand persist middleware handles localStorage cleanup automatically
         set({
           user: null,
