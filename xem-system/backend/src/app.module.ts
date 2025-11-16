@@ -14,6 +14,7 @@ import { DashboardModule } from './dashboard/dashboard.module';
 import { UsersModule } from './users/users.module';
 import { HealthModule } from './health/health.module';
 import { AnalyticsModule } from './analytics/analytics.module';
+import { MailModule } from './mail/mail.module';
 import { validate } from './config/env.validation';
 
 @Module({
@@ -44,6 +45,7 @@ import { validate } from './config/env.validation';
     UsersModule,
     HealthModule,
     AnalyticsModule,
+    MailModule,
   ],
   providers: [
     {
