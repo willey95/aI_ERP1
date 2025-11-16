@@ -2,6 +2,8 @@ import {
   IsString,
   IsNotEmpty,
   IsNumber,
+  IsDateString,
+  IsArray,
   Min,
   IsOptional,
   MaxLength,
@@ -21,18 +23,22 @@ export class CreateExecutionRequestDto {
   @IsNotEmpty({ message: 'Amount is required' })
   amount: number;
 
-  @IsString()
-  @IsNotEmpty({ message: 'Description is required' })
-  @MaxLength(500, { message: 'Description must not exceed 500 characters' })
-  description: string;
+  @IsDateString({}, { message: 'Execution date must be a valid date string' })
+  @IsNotEmpty({ message: 'Execution date is required' })
+  executionDate: string;
 
   @IsString()
-  @IsNotEmpty({ message: 'Request reason is required' })
-  @MaxLength(1000, { message: 'Request reason must not exceed 1000 characters' })
-  requestReason: string;
+  @IsNotEmpty({ message: 'Purpose is required' })
+  @MaxLength(1000, { message: 'Purpose must not exceed 1000 characters' })
+  purpose: string;
 
   @IsString()
   @IsOptional()
-  @MaxLength(500, { message: 'Attachment URL must not exceed 500 characters' })
-  attachmentUrl?: string;
+  @MaxLength(2000, { message: 'Description must not exceed 2000 characters' })
+  description?: string;
+
+  @IsArray()
+  @IsString({ each: true })
+  @IsOptional()
+  attachments?: string[];
 }

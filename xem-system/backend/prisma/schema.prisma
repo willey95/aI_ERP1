@@ -33,6 +33,8 @@ model User {
   assignedProjects     ProjectMember[]
   executionRequests    ExecutionRequest[] @relation("ExecutionRequestor")
   approvals            Approval[]
+  createdTransfers     BudgetTransfer[] @relation("TransferCreator")
+  approvedTransfers    BudgetTransfer[] @relation("TransferApprover")
   notifications        Notification[]
   activityLogs         ActivityLog[]
 
@@ -46,7 +48,8 @@ enum UserRole {
   CFO        // 재무총괄
   RM_TEAM    // RM팀
   TEAM_LEAD  // 팀장
-  STAFF      // 담당자
+  APPROVER   // 승인권자 (품의 승인)
+  STAFF      // 담당자 (인출담당자)
   VIEWER     // 읽기 전용
 }
 
@@ -171,6 +174,8 @@ model BudgetItem {
   // Relations
   project           Project     @relation(fields: [projectId], references: [id], onDelete: Cascade)
   executionRequests ExecutionRequest[]
+  transfersFrom     BudgetTransfer[] @relation("TransferSource")
+  transfersTo       BudgetTransfer[] @relation("TransferTarget")
 
   @@index([projectId])
   @@index([category])
@@ -215,6 +220,7 @@ model ExecutionRequest {
   budgetItem        BudgetItem        @relation(fields: [budgetItemId], references: [id])
   requestedBy       User              @relation("ExecutionRequestor", fields: [requestedById], references: [id])
   approvals         Approval[]
+  budgetTransfers   BudgetTransfer[]
 
   @@index([requestNumber])
   @@index([status])
@@ -238,8 +244,8 @@ model Approval {
   executionRequestId String
 
   // Approval Info
-  step              Int               // 결재 단계 (1: 담당자, 2: 팀장, 3: RM팀, 4: CFO)
-  approverRole      UserRole
+  step              Int               // 결재 단계 (1: 담당자, 2: 승인권자)
+  approverRole      UserRole          // 승인자 역할 (STAFF, APPROVER)
   approverId        String?           // Nullable because not assigned yet
 
   // Status
@@ -268,6 +274,65 @@ enum ApprovalStatus {
   APPROVED  // 승인
   REJECTED  // 반려
   SKIPPED   // 생략
+}
+
+// ============================================
+// 4-1. BUDGET TRANSFER (예산 전용)
+// ============================================
+
+model BudgetTransfer {
+  id                String         @id @default(uuid())
+
+  // 전용 정보
+  sourceItemId      String         // 출처 예산 항목
+  targetItemId      String         // 대상 예산 항목
+  amount            Decimal        @db.Decimal(20, 2) // 전용 금액
+  transferType      TransferType   // 일부/전체 전용
+
+  // 사유 및 상세
+  reason            String         @db.Text // 전용 사유
+  description       String?        @db.Text
+
+  // 상태 및 승인
+  status            TransferStatus @default(PENDING)
+
+  // 집행 요청 연결 (이 전용으로 인해 발생한 집행 요청)
+  executionRequestId String?
+
+  // 승인 정보
+  approvedById      String?
+  approvedAt        DateTime?
+  rejectionReason   String?        @db.Text
+
+  // Metadata
+  createdById       String
+  createdAt         DateTime       @default(now())
+  updatedAt         DateTime       @updatedAt
+
+  // Relations
+  sourceItem        BudgetItem     @relation("TransferSource", fields: [sourceItemId], references: [id])
+  targetItem        BudgetItem     @relation("TransferTarget", fields: [targetItemId], references: [id])
+  executionRequest  ExecutionRequest? @relation(fields: [executionRequestId], references: [id])
+  createdBy         User           @relation("TransferCreator", fields: [createdById], references: [id])
+  approvedBy        User?          @relation("TransferApprover", fields: [approvedById], references: [id])
+
+  @@index([sourceItemId])
+  @@index([targetItemId])
+  @@index([status])
+  @@index([executionRequestId])
+  @@index([createdById])
+  @@map("budget_transfers")
+}
+
+enum TransferType {
+  PARTIAL  // 일부 전용
+  FULL     // 전체 전용
+}
+
+enum TransferStatus {
+  PENDING   // 대기중
+  APPROVED  // 승인됨
+  REJECTED  // 거부됨
 }
 
 // ============================================

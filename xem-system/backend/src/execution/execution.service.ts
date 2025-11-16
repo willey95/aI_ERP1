@@ -117,12 +117,10 @@ export class ExecutionService {
       },
     });
 
-    // Create approval workflow (4 steps)
+    // Create approval workflow (2 steps: 담당자 → 승인권자)
     const approvalSteps = [
-      { step: 1, approverRole: 'STAFF' },      // 담당자 확인
-      { step: 2, approverRole: 'TEAM_LEAD' },  // 팀장 승인
-      { step: 3, approverRole: 'RM_TEAM' },    // RM팀 승인
-      { step: 4, approverRole: 'CFO' },        // CFO 최종 승인
+      { step: 1, approverRole: 'STAFF' },      // 담당자 제출 (자동 승인)
+      { step: 2, approverRole: 'APPROVER' },   // 승인권자 승인
     ];
 
     for (const approval of approvalSteps) {
@@ -131,10 +129,20 @@ export class ExecutionService {
           executionRequestId: execution.id,
           step: approval.step,
           approverRole: approval.approverRole,
-          status: 'PENDING',
+          status: approval.step === 1 ? 'APPROVED' : 'PENDING', // STAFF step auto-approved
+          approverId: approval.step === 1 ? userId : null,      // STAFF auto-assigned
+          decidedAt: approval.step === 1 ? new Date() : null,
         },
       });
     }
+
+    // Auto-advance to step 2 (APPROVER)
+    await this.prisma.executionRequest.update({
+      where: { id: execution.id },
+      data: {
+        currentStep: 2,
+      },
+    });
 
     return execution;
   }

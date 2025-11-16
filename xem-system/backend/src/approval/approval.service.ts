@@ -16,11 +16,15 @@ export class ApprovalService {
       throw new NotFoundException('User not found');
     }
 
-    // Find approvals waiting for this user's role
+    // Find approvals waiting for this user's role AND matching current step
     const approvals = await this.prisma.approval.findMany({
       where: {
         approverRole: user.role,
         status: 'PENDING',
+        // Only show approvals that are at the current step
+        executionRequest: {
+          status: 'PENDING',
+        },
       },
       include: {
         executionRequest: {
@@ -36,12 +40,14 @@ export class ApprovalService {
               select: {
                 mainItem: true,
                 subItem: true,
+                remainingBudget: true,
               },
             },
             requestedBy: {
               select: {
                 name: true,
                 email: true,
+                role: true,
               },
             },
           },
@@ -52,7 +58,12 @@ export class ApprovalService {
       },
     });
 
-    return approvals;
+    // Filter to only include approvals at the current step
+    const filteredApprovals = approvals.filter(
+      (approval) => approval.step === approval.executionRequest.currentStep
+    );
+
+    return filteredApprovals;
   }
 
   async approve(id: string, userId: string, decision?: string) {
@@ -208,11 +219,18 @@ export class ApprovalService {
         throw new BadRequestException('Approval already processed');
       }
 
-      // Validation: Check user role matches required approver role
+      // Validation #1: Check user role matches required approver role
       const user = await tx.user.findUnique({ where: { id: userId } });
       if (!user || user.role !== approval.approverRole) {
         throw new ForbiddenException(
           `This approval requires ${approval.approverRole} role. Your role: ${user?.role || 'unknown'}`
+        );
+      }
+
+      // Validation #2: Check if this approval is the current step
+      if (approval.step !== approval.executionRequest.currentStep) {
+        throw new BadRequestException(
+          `This approval is step ${approval.step}, but current step is ${approval.executionRequest.currentStep}`
         );
       }
 

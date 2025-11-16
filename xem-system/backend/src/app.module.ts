@@ -13,6 +13,7 @@ import { SimulationModule } from './simulation/simulation.module';
 import { DashboardModule } from './dashboard/dashboard.module';
 import { UsersModule } from './users/users.module';
 import { HealthModule } from './health/health.module';
+import { AnalyticsModule } from './analytics/analytics.module';
 import { validate } from './config/env.validation';
 
 @Module({
@@ -42,6 +43,7 @@ import { validate } from './config/env.validation';
     DashboardModule,
     UsersModule,
     HealthModule,
+    AnalyticsModule,
   ],
   providers: [
     {
