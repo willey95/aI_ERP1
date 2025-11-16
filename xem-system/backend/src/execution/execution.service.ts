@@ -1,5 +1,6 @@
 import { Injectable, NotFoundException, BadRequestException } from '@nestjs/common';
 import { PrismaService } from '../prisma/prisma.service';
+import { UserRole } from '@prisma/client';
 import { Decimal } from '@prisma/client/runtime/library';
 
 @Injectable()
@@ -119,8 +120,8 @@ export class ExecutionService {
 
     // Create approval workflow (2 steps: 담당자 → 승인권자)
     const approvalSteps = [
-      { step: 1, approverRole: 'STAFF' },      // 담당자 제출 (자동 승인)
-      { step: 2, approverRole: 'APPROVER' },   // 승인권자 승인
+      { step: 1, approverRole: UserRole.STAFF },      // 담당자 제출 (자동 승인)
+      { step: 2, approverRole: UserRole.APPROVER },   // 승인권자 승인
     ];
 
     for (const approval of approvalSteps) {
