@@ -58,7 +58,7 @@ export default function ReportsPage() {
     enabled: reportType === 'projects' || reportType === 'executions' || !!selectedProject,
   });
 
-  const projects = projectsData?.projects || [];
+  const projects = Array.isArray(projectsData) ? projectsData : (projectsData?.projects || []);
 
   const handleExportCSV = () => {
     let formattedData: any[] = [];

@@ -33,10 +33,10 @@ export default function LoginPage() {
         <div className="text-center">
           <h1 className="text-4xl font-bold text-gray-900">XEM</h1>
           <p className="mt-2 text-sm text-gray-600">
-            Budget Execution Management System
+            예산집행관리시스템
           </p>
           <h2 className="mt-6 text-3xl font-bold text-gray-900">
-            Sign in to your account
+            로그인
           </h2>
         </div>
 
@@ -51,7 +51,7 @@ export default function LoginPage() {
           <div className="rounded-md shadow-sm space-y-4">
             <div>
               <label htmlFor="email" className="sr-only">
-                Email address
+                이메일 주소
               </label>
               <input
                 id="email"
@@ -60,14 +60,14 @@ export default function LoginPage() {
                 autoComplete="email"
                 required
                 className="appearance-none relative block w-full px-3 py-2 border border-gray-300 placeholder-gray-500 text-gray-900 rounded-md focus:outline-none focus:ring-primary focus:border-primary focus:z-10 sm:text-sm"
-                placeholder="Email address"
+                placeholder="이메일 주소"
                 value={email}
                 onChange={(e) => setEmail(e.target.value)}
               />
             </div>
             <div>
               <label htmlFor="password" className="sr-only">
-                Password
+                비밀번호
               </label>
               <input
                 id="password"
@@ -76,7 +76,7 @@ export default function LoginPage() {
                 autoComplete="current-password"
                 required
                 className="appearance-none relative block w-full px-3 py-2 border border-gray-300 placeholder-gray-500 text-gray-900 rounded-md focus:outline-none focus:ring-primary focus:border-primary focus:z-10 sm:text-sm"
-                placeholder="Password"
+                placeholder="비밀번호"
                 value={password}
                 onChange={(e) => setPassword(e.target.value)}
               />
@@ -89,19 +89,19 @@ export default function LoginPage() {
               disabled={loading}
               className="group relative w-full flex justify-center py-2 px-4 border border-transparent text-sm font-medium rounded-md text-white bg-primary hover:bg-primary/90 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-primary disabled:opacity-50 disabled:cursor-not-allowed"
             >
-              {loading ? 'Signing in...' : 'Sign in'}
+              {loading ? '로그인 중...' : '로그인'}
             </button>
           </div>
 
           <div className="text-sm text-gray-600">
-            <p className="font-semibold">Test Accounts:</p>
+            <p className="font-semibold">테스트 계정:</p>
             <ul className="mt-2 space-y-1 text-xs">
-              <li>admin@xem.com (Admin)</li>
+              <li>admin@xem.com (관리자)</li>
               <li>cfo@xem.com (CFO)</li>
-              <li>rm@xem.com (RM Team)</li>
-              <li>teamlead@xem.com (Team Lead)</li>
-              <li>staff1@xem.com (Staff)</li>
-              <li className="mt-1 text-gray-500">Password: password123</li>
+              <li>rm@xem.com (RM팀)</li>
+              <li>teamlead@xem.com (팀장)</li>
+              <li>staff1@xem.com (직원)</li>
+              <li className="mt-1 text-gray-500">비밀번호: password123</li>
             </ul>
           </div>
         </form>

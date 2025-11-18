@@ -44,7 +44,7 @@ export default function BudgetTransferPage() {
     },
   });
 
-  const projects: Project[] = projectsData?.projects || [];
+  const projects: Project[] = Array.isArray(projectsData) ? projectsData : (projectsData?.projects || []);
 
   const getStatusBadge = (status: string) => {
     const styles = {

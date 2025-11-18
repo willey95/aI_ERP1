@@ -17,7 +17,7 @@ export default function DashboardPage() {
   if (isLoading) {
     return (
       <div className="flex items-center justify-center h-screen">
-        <div className="text-lg">Loading...</div>
+        <div className="text-lg">로딩 중...</div>
       </div>
     );
   }
@@ -46,35 +46,35 @@ export default function DashboardPage() {
     <div className="space-y-6">
       {/* Welcome Message */}
       <div>
-        <h1 className="text-2xl font-bold text-gray-900">Dashboard</h1>
-        <p className="mt-1 text-sm text-gray-600">Welcome back, {user?.name}!</p>
+        <h1 className="text-2xl font-bold text-gray-900">대시보드</h1>
+        <p className="mt-1 text-sm text-gray-600">환영합니다, {user?.name}님!</p>
       </div>
 
       {/* KPI Cards */}
       <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
         <div className="bg-gradient-to-br from-blue-500 to-blue-600 p-6 rounded-lg shadow-lg text-white">
-          <div className="text-sm font-medium opacity-90">Total Projects</div>
+          <div className="text-sm font-medium opacity-90">총 프로젝트</div>
           <div className="mt-2 text-3xl font-bold">
             {stats.totalProjects || 0}
           </div>
         </div>
 
         <div className="bg-gradient-to-br from-green-500 to-green-600 p-6 rounded-lg shadow-lg text-white">
-          <div className="text-sm font-medium opacity-90">Total Budget</div>
+          <div className="text-sm font-medium opacity-90">총 예산</div>
           <div className="mt-2 text-2xl font-bold">
             {stats.totalBudget ? formatCurrency(stats.totalBudget) : '₩0'}
           </div>
         </div>
 
         <div className="bg-gradient-to-br from-purple-500 to-purple-600 p-6 rounded-lg shadow-lg text-white">
-          <div className="text-sm font-medium opacity-90">Avg Execution Rate</div>
+          <div className="text-sm font-medium opacity-90">평균 집행률</div>
           <div className="mt-2 text-3xl font-bold">
             {stats.avgExecutionRate ? formatPercentage(stats.avgExecutionRate) : '0%'}
           </div>
         </div>
 
         <div className="bg-gradient-to-br from-orange-500 to-orange-600 p-6 rounded-lg shadow-lg text-white">
-          <div className="text-sm font-medium opacity-90">Pending Approvals</div>
+          <div className="text-sm font-medium opacity-90">대기중 승인</div>
           <div className="mt-2 text-3xl font-bold">
             {stats.pendingApprovals || 0}
           </div>
@@ -85,7 +85,7 @@ export default function DashboardPage() {
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
         {/* Execution Rate Heatmap */}
         <div className="bg-white rounded-lg shadow p-6">
-          <h2 className="text-lg font-bold text-gray-900 mb-4">Execution Rate Heatmap</h2>
+          <h2 className="text-lg font-bold text-gray-900 mb-4">집행률 히트맵</h2>
           {charts.executionHeatmap && charts.executionHeatmap.length > 0 ? (
             <div className="space-y-3">
               {charts.executionHeatmap.map((project: any) => (
@@ -120,13 +120,13 @@ export default function DashboardPage() {
               ))}
             </div>
           ) : (
-            <p className="text-gray-500 text-center py-8">No project data available</p>
+            <p className="text-gray-500 text-center py-8">프로젝트 데이터가 없습니다</p>
           )}
         </div>
 
         {/* Category Breakdown */}
         <div className="bg-white rounded-lg shadow p-6">
-          <h2 className="text-lg font-bold text-gray-900 mb-4">Budget by Category</h2>
+          <h2 className="text-lg font-bold text-gray-900 mb-4">카테고리별 예산</h2>
           {charts.categoryBreakdown && charts.categoryBreakdown.length > 0 ? (
             <div className="space-y-4">
               {charts.categoryBreakdown.map((category: any, index: number) => {
@@ -148,10 +148,10 @@ export default function DashboardPage() {
                     </div>
                     <div className="flex justify-between mt-1">
                       <span className="text-xs text-gray-500">
-                        Budget: {formatCurrency(category.budget)}
+                        예산: {formatCurrency(category.budget)}
                       </span>
                       <span className="text-xs text-gray-500">
-                        Executed: {formatCurrency(category.executed)}
+                        집행: {formatCurrency(category.executed)}
                       </span>
                     </div>
                   </div>
@@ -159,14 +159,14 @@ export default function DashboardPage() {
               })}
             </div>
           ) : (
-            <p className="text-gray-500 text-center py-8">No category data available</p>
+            <p className="text-gray-500 text-center py-8">카테고리 데이터가 없습니다</p>
           )}
         </div>
       </div>
 
       {/* Monthly Trend Chart */}
       <div className="bg-white rounded-lg shadow p-6">
-        <h2 className="text-lg font-bold text-gray-900 mb-4">Monthly Execution Trend (Last 6 Months)</h2>
+        <h2 className="text-lg font-bold text-gray-900 mb-4">월별 집행 추이 (최근 6개월)</h2>
         {charts.monthlyTrends && charts.monthlyTrends.length > 0 ? (
           <div className="relative">
             <div className="flex items-end justify-between space-x-2 h-64">
@@ -197,14 +197,14 @@ export default function DashboardPage() {
             </div>
           </div>
         ) : (
-          <p className="text-gray-500 text-center py-8">No trend data available</p>
+          <p className="text-gray-500 text-center py-8">추이 데이터가 없습니다</p>
         )}
       </div>
 
       {/* Budget Transfer Statistics */}
       {charts.transferStats && charts.transferStats.length > 0 && (
         <div className="bg-white rounded-lg shadow p-6">
-          <h2 className="text-lg font-bold text-gray-900 mb-4">Budget Transfer Statistics</h2>
+          <h2 className="text-lg font-bold text-gray-900 mb-4">예산 이체 통계</h2>
           <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
             {charts.transferStats.map((stat: any) => (
               <div key={stat.status} className="border border-gray-200 rounded-lg p-4">
@@ -224,7 +224,7 @@ export default function DashboardPage() {
       {/* Recent Executions */}
       <div className="bg-white rounded-lg shadow">
         <div className="p-6 border-b border-gray-200">
-          <h2 className="text-xl font-bold text-gray-900">Recent Executions</h2>
+          <h2 className="text-xl font-bold text-gray-900">최근 집행</h2>
         </div>
         <div className="p-6">
           {data?.recentExecutions && data.recentExecutions.length > 0 ? (
@@ -233,19 +233,19 @@ export default function DashboardPage() {
                 <thead>
                   <tr>
                     <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                      Request #
+                      요청번호
                     </th>
                     <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                      Project
+                      프로젝트
                     </th>
                     <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                      Budget Item
+                      예산항목
                     </th>
                     <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                      Amount
+                      금액
                     </th>
                     <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                      Status
+                      상태
                     </th>
                   </tr>
                 </thead>
@@ -279,7 +279,7 @@ export default function DashboardPage() {
               </table>
             </div>
           ) : (
-            <p className="text-gray-500 text-center py-8">No recent executions</p>
+            <p className="text-gray-500 text-center py-8">최근 집행 내역이 없습니다</p>
           )}
         </div>
       </div>

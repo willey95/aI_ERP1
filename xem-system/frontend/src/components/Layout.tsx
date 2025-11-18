@@ -11,7 +11,9 @@ export default function Layout({ children }: LayoutProps) {
   const logout = useAuthStore((state) => state.logout);
   const location = useLocation();
   const navigate = useNavigate();
+  const [projectMenuOpen, setProjectMenuOpen] = useState(true);
   const [budgetMenuOpen, setBudgetMenuOpen] = useState(true);
+  const [executionMenuOpen, setExecutionMenuOpen] = useState(true);
 
   const handleLogout = () => {
     logout();
@@ -19,19 +21,31 @@ export default function Layout({ children }: LayoutProps) {
   };
 
   const navItems = [
-    { path: '/dashboard', label: 'Dashboard' },
-    { path: '/projects', label: 'Projects' },
+    { path: '/dashboard', label: '대시보드' },
     {
-      label: 'Budget',
+      label: '프로젝트',
       subItems: [
-        { path: '/budget', label: 'Overview' },
-        { path: '/budget/manage', label: 'Items' },
-        { path: '/budget/transfers', label: 'Transfers' },
+        { path: '/projects', label: '목록' },
       ],
     },
-    { path: '/executions', label: 'Executions' },
-    { path: '/approvals', label: 'Approvals' },
-    { path: '/reports', label: 'Reports' },
+    {
+      label: '예산',
+      subItems: [
+        { path: '/budget', label: '개요' },
+        { path: '/budget/spreadsheet', label: '스프레드시트' },
+        { path: '/budget/manage', label: '항목' },
+        { path: '/budget/transfers', label: '이체' },
+      ],
+    },
+    {
+      label: '집행',
+      subItems: [
+        { path: '/executions', label: '요청' },
+        { path: '/executions/history', label: '히스토리 & CF' },
+      ],
+    },
+    { path: '/approvals', label: '승인' },
+    { path: '/reports', label: '보고서' },
   ];
 
   return (
@@ -45,7 +59,7 @@ export default function Layout({ children }: LayoutProps) {
               XEM
             </h1>
             <span className="text-[10px] font-semibold tracking-[0.2em] text-slate-400 uppercase mt-0.5">
-              Execution Management
+              예산집행관리
             </span>
           </div>
         </div>
@@ -71,10 +85,19 @@ export default function Layout({ children }: LayoutProps) {
             if ('subItems' in item) {
               // Menu with submenu
               const anySubActive = item.subItems.some(sub => location.pathname === sub.path);
+              const isMenuOpen =
+                item.label === '프로젝트' ? projectMenuOpen :
+                item.label === '예산' ? budgetMenuOpen :
+                executionMenuOpen;
+              const toggleMenu =
+                item.label === '프로젝트' ? () => setProjectMenuOpen(!projectMenuOpen) :
+                item.label === '예산' ? () => setBudgetMenuOpen(!budgetMenuOpen) :
+                () => setExecutionMenuOpen(!executionMenuOpen);
+
               return (
                 <div key={index} className="space-y-1">
                   <button
-                    onClick={() => setBudgetMenuOpen(!budgetMenuOpen)}
+                    onClick={toggleMenu}
                     className={`w-full group flex items-center justify-between px-4 py-3 text-sm font-bold tracking-wide rounded-lg transition-all duration-200 ${
                       anySubActive
                         ? 'bg-gradient-to-r from-blue-600 to-purple-600 text-white shadow-lg shadow-blue-500/20'
@@ -82,9 +105,9 @@ export default function Layout({ children }: LayoutProps) {
                     }`}
                   >
                     <span className="uppercase text-xs tracking-wider font-black">{item.label}</span>
-                    <span className={`text-[10px] transition-transform duration-200 ${budgetMenuOpen ? 'rotate-180' : ''}`}>▼</span>
+                    <span className={`text-[10px] transition-transform duration-200 ${isMenuOpen ? 'rotate-180' : ''}`}>▼</span>
                   </button>
-                  {budgetMenuOpen && (
+                  {isMenuOpen && (
                     <div className="ml-3 mt-1.5 space-y-0.5 pl-3 border-l-2 border-slate-800">
                       {item.subItems.map((subItem) => {
                         const isActive = location.pathname === subItem.path;
@@ -132,7 +155,7 @@ export default function Layout({ children }: LayoutProps) {
             onClick={handleLogout}
             className="w-full px-4 py-3 text-xs font-black tracking-wider text-slate-300 hover:text-white bg-slate-800/50 hover:bg-red-900/30 border border-slate-700/50 hover:border-red-700/50 rounded-lg transition-all duration-200 uppercase"
           >
-            Sign Out
+            로그아웃
           </button>
         </div>
       </div>

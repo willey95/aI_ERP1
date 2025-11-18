@@ -1,11 +1,13 @@
-import { useState } from 'react';
 import { useQuery } from '@tanstack/react-query';
+import { Link } from 'react-router-dom';
 import api from '@/lib/api';
 import { formatCurrency, formatPercentage } from '@/lib/utils';
 import type { Project, BudgetItem } from '@/types';
+import { useProjectStore } from '@/stores/projectStore';
 
 export default function BudgetPage() {
-  const [selectedProjectId, setSelectedProjectId] = useState<string>('');
+  const selectedProjectId = useProjectStore((state) => state.selectedProjectId);
+  const setSelectedProjectId = useProjectStore((state) => state.setSelectedProjectId);
 
   // Fetch all projects for the dropdown
   const { data: projectsData } = useQuery({
@@ -27,18 +29,64 @@ export default function BudgetPage() {
     enabled: !!selectedProjectId,
   });
 
-  const projects: Project[] = projectsData?.projects || [];
-  const budgetItems: BudgetItem[] = budgetData?.items || [];
+  const projects: Project[] = Array.isArray(projectsData) ? projectsData : (projectsData?.projects || []);
+
+  // Extract budget items from summary structure
+  const budgetItems: BudgetItem[] = [];
+  if (budgetData?.summary && Array.isArray(budgetData.summary)) {
+    budgetData.summary.forEach((category: any) => {
+      if (category.items && Array.isArray(category.items)) {
+        budgetItems.push(...category.items);
+      }
+    });
+  }
   const selectedProject = projects.find(p => p.id === selectedProjectId);
 
-  // Group budget items by category
-  const groupedItems = budgetItems.reduce((acc, item) => {
+  // Separate items into revenue (수입) and expense (지출)
+  const revenueItems = budgetItems.filter(item =>
+    item.category.includes('수입') || item.category.includes('분양') || item.category.includes('매출')
+  );
+  const expenseItems = budgetItems.filter(item =>
+    !item.category.includes('수입') && !item.category.includes('분양') && !item.category.includes('매출')
+  );
+
+  // Group revenue items by mainItem
+  const groupedRevenue = revenueItems.reduce((acc, item) => {
+    if (!acc[item.mainItem]) {
+      acc[item.mainItem] = [];
+    }
+    acc[item.mainItem].push(item);
+    return acc;
+  }, {} as Record<string, BudgetItem[]>);
+
+  // Group expense items by category
+  const groupedExpense = expenseItems.reduce((acc, item) => {
     if (!acc[item.category]) {
       acc[item.category] = [];
     }
     acc[item.category].push(item);
     return acc;
   }, {} as Record<string, BudgetItem[]>);
+
+  // Calculate totals
+  const calculateTotal = (items: BudgetItem[]) => {
+    return items.reduce(
+      (sum, item) => ({
+        budget: sum.budget + parseFloat(item.currentBudget),
+        executed: sum.executed + parseFloat(item.executedAmount),
+        remaining: sum.remaining + parseFloat(item.remainingBudget),
+      }),
+      { budget: 0, executed: 0, remaining: 0 }
+    );
+  };
+
+  const revenueTotal = calculateTotal(revenueItems);
+  const expenseTotal = calculateTotal(expenseItems);
+  const netTotal = {
+    budget: revenueTotal.budget - expenseTotal.budget,
+    executed: revenueTotal.executed - expenseTotal.executed,
+    remaining: revenueTotal.remaining - expenseTotal.remaining,
+  };
 
   return (
     <div>
@@ -72,160 +120,256 @@ export default function BudgetPage() {
         </div>
       ) : (
         <>
-          {/* Project Summary Card */}
+          {/* Project Header */}
           {selectedProject && (
-            <div className="bg-white rounded-lg shadow p-6 mb-6">
-              <div className="grid grid-cols-1 md:grid-cols-4 gap-6">
-                <div>
-                  <div className="text-sm text-gray-500">Total Budget</div>
-                  <div className="text-2xl font-bold text-gray-900">
-                    {formatCurrency(selectedProject.currentBudget)}
-                  </div>
-                </div>
-                <div>
-                  <div className="text-sm text-gray-500">Executed</div>
-                  <div className="text-2xl font-bold text-blue-600">
-                    {formatCurrency(selectedProject.executedAmount)}
-                  </div>
-                </div>
-                <div>
-                  <div className="text-sm text-gray-500">Remaining</div>
-                  <div className="text-2xl font-bold text-green-600">
-                    {formatCurrency(selectedProject.remainingBudget)}
-                  </div>
-                </div>
-                <div>
-                  <div className="text-sm text-gray-500">Execution Rate</div>
-                  <div className="text-2xl font-bold text-gray-900">
-                    {formatPercentage(selectedProject.executionRate)}
-                  </div>
-                  <div className="mt-2 w-full bg-gray-200 rounded-full h-2">
-                    <div
-                      className="bg-blue-600 h-2 rounded-full"
-                      style={{ width: `${Math.min(selectedProject.executionRate, 100)}%` }}
-                    />
-                  </div>
+            <div className="bg-white rounded-lg shadow p-4 mb-4">
+              <div className="flex items-center justify-between">
+                <Link
+                  to={`/projects/${selectedProject.id}`}
+                  className="text-lg font-bold text-slate-900 hover:underline"
+                >
+                  {selectedProject.code} - {selectedProject.name} →
+                </Link>
+                <div className="flex gap-2 text-sm">
+                  <Link to="/budget/spreadsheet" className="font-semibold text-emerald-700 hover:underline">
+                    📊 스프레드시트
+                  </Link>
+                  <span className="text-slate-300">|</span>
+                  <Link to="/budget/manage" className="text-slate-700 hover:underline">
+                    항목 관리
+                  </Link>
+                  <span className="text-slate-300">|</span>
+                  <Link to="/executions/history" className="text-slate-700 hover:underline">
+                    집행 히스토리
+                  </Link>
                 </div>
               </div>
             </div>
           )}
 
-          {/* Budget Items by Category */}
-          {Object.keys(groupedItems).length === 0 ? (
+          {/* Financial Model View */}
+          {budgetItems.length === 0 ? (
             <div className="bg-white rounded-lg shadow p-12 text-center">
               <p className="text-gray-500">No budget items found for this project</p>
             </div>
           ) : (
-            <div className="space-y-6">
-              {Object.entries(groupedItems).map(([category, items]) => {
-                // Calculate category totals
-                const categoryTotal = items.reduce(
-                  (sum, item) => ({
-                    budget: sum.budget + parseFloat(item.currentBudget),
-                    executed: sum.executed + parseFloat(item.executedAmount),
-                    remaining: sum.remaining + parseFloat(item.remainingBudget),
-                  }),
-                  { budget: 0, executed: 0, remaining: 0 }
-                );
-                const categoryRate = categoryTotal.budget === 0
-                  ? 0
-                  : (categoryTotal.executed / categoryTotal.budget) * 100;
-
-                return (
-                  <div key={category} className="bg-white rounded-lg shadow overflow-hidden">
-                    {/* Category Header */}
-                    <div className="bg-gray-50 px-6 py-4 border-b border-gray-200">
-                      <div className="flex items-center justify-between">
-                        <h3 className="text-lg font-bold text-gray-900">{category}</h3>
-                        <div className="flex items-center gap-6 text-sm">
-                          <div>
-                            <span className="text-gray-500">Budget: </span>
-                            <span className="font-semibold">{formatCurrency(categoryTotal.budget)}</span>
-                          </div>
-                          <div>
-                            <span className="text-gray-500">Executed: </span>
-                            <span className="font-semibold text-blue-600">
-                              {formatCurrency(categoryTotal.executed)}
-                            </span>
-                          </div>
-                          <div>
-                            <span className="text-gray-500">Rate: </span>
-                            <span className="font-semibold">{formatPercentage(categoryRate)}</span>
-                          </div>
-                        </div>
+            <div className="bg-white rounded-lg shadow overflow-hidden">
+              <table className="min-w-full">
+                <thead className="bg-slate-100">
+                  <tr>
+                    <th className="px-4 py-2 text-left text-xs font-bold text-slate-700 uppercase w-1/3">
+                      항목
+                    </th>
+                    <th className="px-4 py-2 text-right text-xs font-bold text-slate-700 uppercase w-1/6">
+                      예산 (천원)
+                    </th>
+                    <th className="px-4 py-2 text-right text-xs font-bold text-slate-700 uppercase w-1/6">
+                      집행 (천원)
+                    </th>
+                    <th className="px-4 py-2 text-right text-xs font-bold text-slate-700 uppercase w-1/6">
+                      잔액 (천원)
+                    </th>
+                    <th className="px-4 py-2 text-right text-xs font-bold text-slate-700 uppercase w-1/6">
+                      집행률
+                    </th>
+                  </tr>
+                </thead>
+                <tbody className="divide-y divide-slate-200">
+                  {/* REVENUE SECTION */}
+                  <tr className="bg-blue-50">
+                    <td colSpan={5} className="px-4 py-2">
+                      <div className="text-sm font-black text-blue-900 uppercase tracking-wide">
+                        수입
                       </div>
-                    </div>
+                    </td>
+                  </tr>
+                  {Object.entries(groupedRevenue).map(([mainItem, items]) => {
+                    const subtotal = calculateTotal(items);
+                    const rate = subtotal.budget === 0 ? 0 : (subtotal.executed / subtotal.budget) * 100;
 
-                    {/* Budget Items Table */}
-                    <div className="overflow-x-auto">
-                      <table className="min-w-full divide-y divide-gray-200">
-                        <thead className="bg-gray-50">
-                          <tr>
-                            <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                              Item
-                            </th>
-                            <th className="px-6 py-3 text-right text-xs font-medium text-gray-500 uppercase tracking-wider">
-                              Budget
-                            </th>
-                            <th className="px-6 py-3 text-right text-xs font-medium text-gray-500 uppercase tracking-wider">
-                              Executed
-                            </th>
-                            <th className="px-6 py-3 text-right text-xs font-medium text-gray-500 uppercase tracking-wider">
-                              Remaining
-                            </th>
-                            <th className="px-6 py-3 text-right text-xs font-medium text-gray-500 uppercase tracking-wider">
-                              Rate
-                            </th>
-                            <th className="px-6 py-3 text-right text-xs font-medium text-gray-500 uppercase tracking-wider">
-                              Progress
-                            </th>
+                    return (
+                      <>
+                        <tr key={mainItem} className="bg-blue-50/50">
+                          <td className="px-6 py-1.5 text-sm font-bold text-slate-800">
+                            {mainItem}
+                          </td>
+                          <td className="px-4 py-1.5 text-right text-sm font-semibold text-slate-900">
+                            {formatCurrency(subtotal.budget)}
+                          </td>
+                          <td className="px-4 py-1.5 text-right text-sm font-semibold text-blue-700">
+                            {formatCurrency(subtotal.executed)}
+                          </td>
+                          <td className="px-4 py-1.5 text-right text-sm font-semibold text-slate-700">
+                            {formatCurrency(subtotal.remaining)}
+                          </td>
+                          <td className="px-4 py-1.5 text-right text-sm font-semibold text-slate-900">
+                            {formatPercentage(rate)}
+                          </td>
+                        </tr>
+                        {items.map(item => item.subItem && (
+                          <tr key={item.id} className="hover:bg-blue-50/30">
+                            <td className="px-10 py-1 text-xs text-slate-600">
+                              └ {item.subItem}
+                            </td>
+                            <td className="px-4 py-1 text-right text-xs text-slate-700">
+                              {formatCurrency(item.currentBudget)}
+                            </td>
+                            <td className="px-4 py-1 text-right text-xs text-blue-600">
+                              {formatCurrency(item.executedAmount)}
+                            </td>
+                            <td className="px-4 py-1 text-right text-xs text-slate-600">
+                              {formatCurrency(item.remainingBudget)}
+                            </td>
+                            <td className="px-4 py-1 text-right text-xs text-slate-700">
+                              {formatPercentage(item.executionRate)}
+                            </td>
                           </tr>
-                        </thead>
-                        <tbody className="bg-white divide-y divide-gray-200">
-                          {items.map((item) => (
-                            <tr key={item.id} className="hover:bg-gray-50">
-                              <td className="px-6 py-4 whitespace-nowrap">
-                                <div className="text-sm font-medium text-gray-900">
-                                  {item.mainItem}
-                                </div>
-                                {item.subItem && (
-                                  <div className="text-xs text-gray-500">{item.subItem}</div>
-                                )}
-                              </td>
-                              <td className="px-6 py-4 whitespace-nowrap text-right text-sm text-gray-900">
-                                {formatCurrency(item.currentBudget)}
-                              </td>
-                              <td className="px-6 py-4 whitespace-nowrap text-right text-sm text-blue-600 font-medium">
-                                {formatCurrency(item.executedAmount)}
-                              </td>
-                              <td className="px-6 py-4 whitespace-nowrap text-right text-sm text-green-600 font-medium">
-                                {formatCurrency(item.remainingBudget)}
-                              </td>
-                              <td className="px-6 py-4 whitespace-nowrap text-right text-sm font-medium text-gray-900">
-                                {formatPercentage(item.executionRate)}
-                              </td>
-                              <td className="px-6 py-4 whitespace-nowrap">
-                                <div className="w-24 bg-gray-200 rounded-full h-2">
-                                  <div
-                                    className={`h-2 rounded-full ${
-                                      item.executionRate >= 90
-                                        ? 'bg-red-600'
-                                        : item.executionRate >= 70
-                                        ? 'bg-yellow-600'
-                                        : 'bg-green-600'
-                                    }`}
-                                    style={{ width: `${Math.min(item.executionRate, 100)}%` }}
-                                  />
-                                </div>
-                              </td>
-                            </tr>
-                          ))}
-                        </tbody>
-                      </table>
-                    </div>
-                  </div>
-                );
-              })}
+                        ))}
+                      </>
+                    );
+                  })}
+                  <tr className="bg-blue-100 border-t-2 border-blue-300">
+                    <td className="px-6 py-2 text-sm font-black text-blue-900">
+                      수입 합계
+                    </td>
+                    <td className="px-4 py-2 text-right text-sm font-bold text-slate-900">
+                      {formatCurrency(revenueTotal.budget)}
+                    </td>
+                    <td className="px-4 py-2 text-right text-sm font-bold text-blue-700">
+                      {formatCurrency(revenueTotal.executed)}
+                    </td>
+                    <td className="px-4 py-2 text-right text-sm font-bold text-slate-700">
+                      {formatCurrency(revenueTotal.remaining)}
+                    </td>
+                    <td className="px-4 py-2 text-right text-sm font-bold text-slate-900">
+                      {formatPercentage(revenueTotal.budget === 0 ? 0 : (revenueTotal.executed / revenueTotal.budget) * 100)}
+                    </td>
+                  </tr>
+
+                  {/* EXPENSE SECTION */}
+                  <tr className="bg-red-50">
+                    <td colSpan={5} className="px-4 py-2">
+                      <div className="text-sm font-black text-red-900 uppercase tracking-wide">
+                        필수사업비
+                      </div>
+                    </td>
+                  </tr>
+                  {Object.entries(groupedExpense).map(([category, items]) => {
+                    const categoryTotal = calculateTotal(items);
+                    const categoryRate = categoryTotal.budget === 0 ? 0 : (categoryTotal.executed / categoryTotal.budget) * 100;
+
+                    // Group items by mainItem
+                    const itemsByMain = items.reduce((acc, item) => {
+                      if (!acc[item.mainItem]) acc[item.mainItem] = [];
+                      acc[item.mainItem].push(item);
+                      return acc;
+                    }, {} as Record<string, BudgetItem[]>);
+
+                    return (
+                      <>
+                        <tr key={category} className="bg-red-50/70">
+                          <td className="px-6 py-1.5 text-sm font-bold text-slate-900">
+                            {category}
+                          </td>
+                          <td className="px-4 py-1.5 text-right text-sm font-semibold text-slate-900">
+                            {formatCurrency(categoryTotal.budget)}
+                          </td>
+                          <td className="px-4 py-1.5 text-right text-sm font-semibold text-red-700">
+                            {formatCurrency(categoryTotal.executed)}
+                          </td>
+                          <td className="px-4 py-1.5 text-right text-sm font-semibold text-slate-700">
+                            {formatCurrency(categoryTotal.remaining)}
+                          </td>
+                          <td className="px-4 py-1.5 text-right text-sm font-semibold text-slate-900">
+                            {formatPercentage(categoryRate)}
+                          </td>
+                        </tr>
+                        {Object.entries(itemsByMain).map(([mainItem, mainItems]) => {
+                          const mainTotal = calculateTotal(mainItems);
+                          const mainRate = mainTotal.budget === 0 ? 0 : (mainTotal.executed / mainTotal.budget) * 100;
+
+                          return (
+                            <>
+                              <tr key={mainItem} className="hover:bg-red-50/30">
+                                <td className="px-8 py-1 text-xs font-semibold text-slate-700">
+                                  • {mainItem}
+                                </td>
+                                <td className="px-4 py-1 text-right text-xs font-medium text-slate-700">
+                                  {formatCurrency(mainTotal.budget)}
+                                </td>
+                                <td className="px-4 py-1 text-right text-xs font-medium text-red-600">
+                                  {formatCurrency(mainTotal.executed)}
+                                </td>
+                                <td className="px-4 py-1 text-right text-xs font-medium text-slate-600">
+                                  {formatCurrency(mainTotal.remaining)}
+                                </td>
+                                <td className="px-4 py-1 text-right text-xs font-medium text-slate-700">
+                                  {formatPercentage(mainRate)}
+                                </td>
+                              </tr>
+                              {mainItems.map(item => item.subItem && (
+                                <tr key={item.id} className="hover:bg-red-50/20">
+                                  <td className="px-12 py-0.5 text-xs text-slate-500">
+                                    └ {item.subItem}
+                                  </td>
+                                  <td className="px-4 py-0.5 text-right text-xs text-slate-600">
+                                    {formatCurrency(item.currentBudget)}
+                                  </td>
+                                  <td className="px-4 py-0.5 text-right text-xs text-red-500">
+                                    {formatCurrency(item.executedAmount)}
+                                  </td>
+                                  <td className="px-4 py-0.5 text-right text-xs text-slate-500">
+                                    {formatCurrency(item.remainingBudget)}
+                                  </td>
+                                  <td className="px-4 py-0.5 text-right text-xs text-slate-600">
+                                    {formatPercentage(item.executionRate)}
+                                  </td>
+                                </tr>
+                              ))}
+                            </>
+                          );
+                        })}
+                      </>
+                    );
+                  })}
+                  <tr className="bg-red-100 border-t-2 border-red-300">
+                    <td className="px-6 py-2 text-sm font-black text-red-900">
+                      필수사업비 합계
+                    </td>
+                    <td className="px-4 py-2 text-right text-sm font-bold text-slate-900">
+                      {formatCurrency(expenseTotal.budget)}
+                    </td>
+                    <td className="px-4 py-2 text-right text-sm font-bold text-red-700">
+                      {formatCurrency(expenseTotal.executed)}
+                    </td>
+                    <td className="px-4 py-2 text-right text-sm font-bold text-slate-700">
+                      {formatCurrency(expenseTotal.remaining)}
+                    </td>
+                    <td className="px-4 py-2 text-right text-sm font-bold text-slate-900">
+                      {formatPercentage(expenseTotal.budget === 0 ? 0 : (expenseTotal.executed / expenseTotal.budget) * 100)}
+                    </td>
+                  </tr>
+
+                  {/* NET TOTAL */}
+                  <tr className="bg-slate-900 border-t-4 border-slate-700">
+                    <td className="px-6 py-3 text-base font-black text-white uppercase tracking-wide">
+                      순손익
+                    </td>
+                    <td className="px-4 py-3 text-right text-base font-black text-white">
+                      {formatCurrency(netTotal.budget)}
+                    </td>
+                    <td className={`px-4 py-3 text-right text-base font-black ${netTotal.executed >= 0 ? 'text-green-400' : 'text-red-400'}`}>
+                      {formatCurrency(netTotal.executed)}
+                    </td>
+                    <td className="px-4 py-3 text-right text-base font-black text-white">
+                      {formatCurrency(netTotal.remaining)}
+                    </td>
+                    <td className="px-4 py-3 text-right text-base font-black text-white">
+                      -
+                    </td>
+                  </tr>
+                </tbody>
+              </table>
             </div>
           )}
         </>

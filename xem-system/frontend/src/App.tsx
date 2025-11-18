@@ -9,12 +9,19 @@ import ProjectNewPage from './pages/ProjectNewPage';
 import ProjectDetailPage from './pages/ProjectDetailPage';
 import BudgetPage from './pages/BudgetPage';
 import BudgetManagementPage from './pages/BudgetManagementPage';
+import BudgetSpreadsheetPage from './pages/BudgetSpreadsheetPage';
 import BudgetTransferPage from './pages/BudgetTransferPage';
 import ExecutionsPage from './pages/ExecutionsPage';
 import ExecutionRequestCreatePage from './pages/ExecutionRequestCreatePage';
+import ExecutionHistoryPage from './pages/ExecutionHistoryPage';
+import ExecutionDetailPage from './pages/ExecutionDetailPage';
 import ApprovalsPage from './pages/ApprovalsPage';
 import ApproverDashboardPage from './pages/ApproverDashboardPage';
 import ReportsPage from './pages/ReportsPage';
+import SimulationPage from './pages/SimulationPage';
+import FinancialModelPage from './pages/FinancialModelPage';
+import CashFlowPage from './pages/CashFlowPage';
+import BudgetCalculatorPage from './pages/BudgetCalculatorPage';
 
 function ProtectedRoute({ children }: { children: React.ReactNode }) {
   const isAuthenticated = useAuthStore((state) => state.isAuthenticated);
@@ -104,6 +111,14 @@ function App() {
           }
         />
         <Route
+          path="/budget/spreadsheet"
+          element={
+            <ProtectedRoute>
+              <BudgetSpreadsheetPage />
+            </ProtectedRoute>
+          }
+        />
+        <Route
           path="/budget/transfers"
           element={
             <ProtectedRoute>
@@ -128,6 +143,22 @@ function App() {
           }
         />
         <Route
+          path="/executions/history"
+          element={
+            <ProtectedRoute>
+              <ExecutionHistoryPage />
+            </ProtectedRoute>
+          }
+        />
+        <Route
+          path="/executions/:id"
+          element={
+            <ProtectedRoute>
+              <ExecutionDetailPage />
+            </ProtectedRoute>
+          }
+        />
+        <Route
           path="/approvals"
           element={
             <ProtectedRoute>
@@ -148,6 +179,38 @@ function App() {
           element={
             <ProtectedRoute>
               <ReportsPage />
+            </ProtectedRoute>
+          }
+        />
+        <Route
+          path="/simulation/:projectId"
+          element={
+            <ProtectedRoute>
+              <SimulationPage />
+            </ProtectedRoute>
+          }
+        />
+        <Route
+          path="/financial/:projectId"
+          element={
+            <ProtectedRoute>
+              <FinancialModelPage />
+            </ProtectedRoute>
+          }
+        />
+        <Route
+          path="/cashflow/:projectId"
+          element={
+            <ProtectedRoute>
+              <CashFlowPage />
+            </ProtectedRoute>
+          }
+        />
+        <Route
+          path="/calculator/:projectId"
+          element={
+            <ProtectedRoute>
+              <BudgetCalculatorPage />
             </ProtectedRoute>
           }
         />

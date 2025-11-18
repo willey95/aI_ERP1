@@ -128,6 +128,58 @@ export class BudgetService {
     return budgetItem;
   }
 
+  async bulkImport(items: any[]) {
+    if (!items || items.length === 0) {
+      throw new Error('No items to import');
+    }
+
+    // Get the projectId from the first item
+    const projectId = items[0].projectId;
+
+    // Validate that all items have the same projectId
+    const allSameProject = items.every(item => item.projectId === projectId);
+    if (!allSameProject) {
+      throw new Error('All items must belong to the same project');
+    }
+
+    // Create all budget items
+    const createdItems = await Promise.all(
+      items.map(async (item, index) => {
+        const {
+          category,
+          mainItem,
+          subItem,
+          currentBudget,
+        } = item;
+
+        const budget = new Decimal(currentBudget);
+
+        return this.prisma.budgetItem.create({
+          data: {
+            projectId,
+            category,
+            mainItem,
+            subItem: subItem || null,
+            initialBudget: budget,
+            currentBudget: budget,
+            executedAmount: new Decimal(0),
+            remainingBudget: budget,
+            executionRate: 0,
+            displayOrder: index,
+          },
+        });
+      })
+    );
+
+    // Update project budget once after all items are created
+    await this.updateProjectBudget(projectId);
+
+    return {
+      created: createdItems.length,
+      items: createdItems,
+    };
+  }
+
   async update(id: string, data: any) {
     const budgetItem = await this.prisma.budgetItem.update({
       where: { id },

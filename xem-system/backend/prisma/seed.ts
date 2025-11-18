@@ -274,6 +274,87 @@ async function main() {
 
   console.log('✅ Created budget items for Project 1');
 
+  // Create budget items for Project 2
+  order = 0;
+  for (const item of budgetItems) {
+    const amount = new Decimal(100000000000).times(item.ratio);
+    const executed = item.category === '지출' ? amount.times(0.75) : new Decimal(0);
+    const remaining = amount.minus(executed);
+    const rate = amount.equals(0) ? 0 : executed.dividedBy(amount).times(100).toNumber();
+
+    await prisma.budgetItem.create({
+      data: {
+        projectId: project2.id,
+        category: item.category,
+        mainItem: item.mainItem,
+        subItem: item.subItem,
+        initialBudget: amount,
+        currentBudget: amount,
+        executedAmount: executed,
+        remainingBudget: remaining,
+        executionRate: rate,
+        displayOrder: order++,
+        isActive: true,
+      },
+    });
+  }
+
+  console.log('✅ Created budget items for Project 2');
+
+  // Create budget items for Project 3
+  order = 0;
+  for (const item of budgetItems) {
+    const amount = new Decimal(210000000000).times(item.ratio);
+    const executed = item.category === '지출' ? amount.times(0.90) : new Decimal(0);
+    const remaining = amount.minus(executed);
+    const rate = amount.equals(0) ? 0 : executed.dividedBy(amount).times(100).toNumber();
+
+    await prisma.budgetItem.create({
+      data: {
+        projectId: project3.id,
+        category: item.category,
+        mainItem: item.mainItem,
+        subItem: item.subItem,
+        initialBudget: amount,
+        currentBudget: amount,
+        executedAmount: executed,
+        remainingBudget: remaining,
+        executionRate: rate,
+        displayOrder: order++,
+        isActive: true,
+      },
+    });
+  }
+
+  console.log('✅ Created budget items for Project 3');
+
+  // Create budget items for Project 4
+  order = 0;
+  for (const item of budgetItems) {
+    const amount = new Decimal(180000000000).times(item.ratio);
+    const executed = item.category === '지출' ? amount.times(0.30) : new Decimal(0);
+    const remaining = amount.minus(executed);
+    const rate = amount.equals(0) ? 0 : executed.dividedBy(amount).times(100).toNumber();
+
+    await prisma.budgetItem.create({
+      data: {
+        projectId: project4.id,
+        category: item.category,
+        mainItem: item.mainItem,
+        subItem: item.subItem,
+        initialBudget: amount,
+        currentBudget: amount,
+        executedAmount: executed,
+        remainingBudget: remaining,
+        executionRate: rate,
+        displayOrder: order++,
+        isActive: true,
+      },
+    });
+  }
+
+  console.log('✅ Created budget items for Project 4');
+
   // Create a sample execution request
   const budgetItem = await prisma.budgetItem.findFirst({
     where: {

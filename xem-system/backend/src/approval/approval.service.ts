@@ -161,7 +161,7 @@ export class ApprovalService {
 
         // Update project totals (within transaction)
         const budgetItems = await tx.budgetItem.findMany({
-          where: { projectId: executionRequest.projectId },
+          where: { projectId: executionRequest.projectId, isActive: true },
         });
 
         const totalBudget = budgetItems.reduce(

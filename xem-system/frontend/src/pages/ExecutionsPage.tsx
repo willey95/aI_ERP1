@@ -1,5 +1,6 @@
 import { useState } from 'react';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
+import { useNavigate } from 'react-router-dom';
 import { useAuthStore } from '@/stores/authStore';
 import api from '@/lib/api';
 import { formatCurrency, formatDate } from '@/lib/utils';
@@ -10,6 +11,7 @@ export default function ExecutionsPage() {
   const [statusFilter, setStatusFilter] = useState<string>('ALL');
   const user = useAuthStore((state) => state.user);
   const queryClient = useQueryClient();
+  const navigate = useNavigate();
 
   // Fetch execution requests
   const { data, isLoading } = useQuery({
@@ -20,7 +22,7 @@ export default function ExecutionsPage() {
     },
   });
 
-  const executions: ExecutionRequest[] = data?.executions || [];
+  const executions: ExecutionRequest[] = Array.isArray(data) ? data : (data?.executions || []);
 
   // Filter executions by status
   const filteredExecutions = statusFilter === 'ALL'
@@ -116,8 +118,12 @@ export default function ExecutionsPage() {
               </thead>
               <tbody className="bg-white divide-y divide-gray-200">
                 {filteredExecutions.map((execution: any) => (
-                  <tr key={execution.id} className="hover:bg-gray-50">
-                    <td className="px-6 py-4 whitespace-nowrap text-sm font-medium text-blue-600">
+                  <tr
+                    key={execution.id}
+                    onClick={() => navigate(`/executions/${execution.id}`)}
+                    className="hover:bg-gray-50 cursor-pointer transition-colors"
+                  >
+                    <td className="px-6 py-4 whitespace-nowrap text-sm font-medium text-blue-600 hover:underline">
                       {execution.requestNumber}
                     </td>
                     <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">
@@ -188,8 +194,17 @@ function CreateExecutionForm({ onClose, onSuccess }: { onClose: () => void; onSu
     enabled: !!selectedProjectId,
   });
 
-  const projects: Project[] = projectsData?.projects || [];
-  const budgetItems: BudgetItem[] = budgetData?.items || [];
+  const projects: Project[] = Array.isArray(projectsData) ? projectsData : (projectsData?.projects || []);
+
+  // Extract budget items from summary structure
+  const budgetItems: BudgetItem[] = [];
+  if (budgetData?.summary && Array.isArray(budgetData.summary)) {
+    budgetData.summary.forEach((category: any) => {
+      if (category.items && Array.isArray(category.items)) {
+        budgetItems.push(...category.items);
+      }
+    });
+  }
 
   // Create mutation
   const createMutation = useMutation({
@@ -306,7 +321,7 @@ function CreateExecutionForm({ onClose, onSuccess }: { onClose: () => void; onSu
           {/* Amount */}
           <div>
             <label className="block text-sm font-medium text-gray-700 mb-1">
-              Amount (KRW) *
+              집행 금액 (₩) *
             </label>
             <input
               type="number"
@@ -316,8 +331,24 @@ function CreateExecutionForm({ onClose, onSuccess }: { onClose: () => void; onSu
               value={amount}
               onChange={(e) => setAmount(e.target.value)}
               className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
-              placeholder="Enter amount"
+              placeholder="집행 금액 입력"
             />
+            {amount && (
+              <div className="mt-2 text-sm text-gray-600">
+                {formatCurrency(parseFloat(amount))}
+              </div>
+            )}
+            {selectedBudgetItem && amount && parseFloat(amount) > parseFloat(selectedBudgetItem.remainingBudget) && (
+              <div className="mt-2 p-3 bg-red-50 border border-red-200 rounded-lg text-sm text-red-700">
+                <div className="flex items-start gap-2">
+                  <span className="text-lg">⚠️</span>
+                  <div>
+                    <div className="font-semibold">집행 금액이 잔액을 초과합니다!</div>
+                    <div className="mt-1">사용 가능 잔액: {formatCurrency(selectedBudgetItem.remainingBudget)}</div>
+                  </div>
+                </div>
+              </div>
+            )}
           </div>
 
           {/* Execution Date */}
@@ -370,14 +401,17 @@ function CreateExecutionForm({ onClose, onSuccess }: { onClose: () => void; onSu
               onClick={onClose}
               className="flex-1 px-4 py-2 border border-gray-300 text-gray-700 rounded-lg hover:bg-gray-50 font-medium"
             >
-              Cancel
+              취소
             </button>
             <button
               type="submit"
-              disabled={createMutation.isPending}
+              disabled={
+                createMutation.isPending ||
+                (selectedBudgetItem && amount && parseFloat(amount) > parseFloat(selectedBudgetItem.remainingBudget))
+              }
               className="flex-1 px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 font-medium disabled:opacity-50 disabled:cursor-not-allowed"
             >
-              {createMutation.isPending ? 'Creating...' : 'Create Request'}
+              {createMutation.isPending ? '생성 중...' : '집행 요청 생성'}
             </button>
           </div>
         </form>
