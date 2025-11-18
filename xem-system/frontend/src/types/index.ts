@@ -44,6 +44,9 @@ export interface BudgetItem {
   currentBudget: string;
   executedAmount: string;
   remainingBudget: string;
+  remainingBeforeExec: string;
+  remainingAfterExec: string;
+  pendingExecutionAmount: string;
   executionRate: number;
   displayOrder: number;
 }

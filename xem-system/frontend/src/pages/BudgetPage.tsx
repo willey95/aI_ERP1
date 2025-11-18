@@ -72,20 +72,25 @@ export default function BudgetPage() {
   const calculateTotal = (items: BudgetItem[]) => {
     return items.reduce(
       (sum, item) => ({
-        budget: sum.budget + parseFloat(item.currentBudget),
-        executed: sum.executed + parseFloat(item.executedAmount),
-        remaining: sum.remaining + parseFloat(item.remainingBudget),
+        initial: sum.initial + parseFloat(item.initialBudget || '0'),
+        current: sum.current + parseFloat(item.currentBudget || '0'),
+        executed: sum.executed + parseFloat(item.executedAmount || '0'),
+        remainingBefore: sum.remainingBefore + parseFloat(item.remainingBeforeExec || '0'),
+        remainingAfter: sum.remainingAfter + parseFloat(item.remainingAfterExec || '0'),
+        pending: sum.pending + parseFloat(item.pendingExecutionAmount || '0'),
       }),
-      { budget: 0, executed: 0, remaining: 0 }
+      { initial: 0, current: 0, executed: 0, remainingBefore: 0, remainingAfter: 0, pending: 0 }
     );
   };
 
   const revenueTotal = calculateTotal(revenueItems);
   const expenseTotal = calculateTotal(expenseItems);
   const netTotal = {
-    budget: revenueTotal.budget - expenseTotal.budget,
+    initial: revenueTotal.initial - expenseTotal.initial,
+    current: revenueTotal.current - expenseTotal.current,
     executed: revenueTotal.executed - expenseTotal.executed,
-    remaining: revenueTotal.remaining - expenseTotal.remaining,
+    remainingBefore: revenueTotal.remainingBefore - expenseTotal.remainingBefore,
+    remainingAfter: revenueTotal.remainingAfter - expenseTotal.remainingAfter,
   };
 
   return (
@@ -153,19 +158,25 @@ export default function BudgetPage() {
               <table className="min-w-full">
                 <thead className="bg-slate-100">
                   <tr>
-                    <th className="px-4 py-2 text-left text-xs font-bold text-slate-700 uppercase w-1/3">
+                    <th className="px-4 py-2 text-left text-xs font-bold text-slate-700 uppercase">
                       항목
                     </th>
-                    <th className="px-4 py-2 text-right text-xs font-bold text-slate-700 uppercase w-1/6">
-                      예산 (천원)
+                    <th className="px-4 py-2 text-right text-xs font-bold text-slate-700 uppercase">
+                      최초예산<br/>(천원)
                     </th>
-                    <th className="px-4 py-2 text-right text-xs font-bold text-slate-700 uppercase w-1/6">
-                      집행 (천원)
+                    <th className="px-4 py-2 text-right text-xs font-bold text-slate-700 uppercase">
+                      변경예산<br/>(천원)
                     </th>
-                    <th className="px-4 py-2 text-right text-xs font-bold text-slate-700 uppercase w-1/6">
-                      잔액 (천원)
+                    <th className="px-4 py-2 text-right text-xs font-bold text-slate-700 uppercase">
+                      기집행<br/>(천원)
                     </th>
-                    <th className="px-4 py-2 text-right text-xs font-bold text-slate-700 uppercase w-1/6">
+                    <th className="px-4 py-2 text-right text-xs font-bold text-slate-700 uppercase">
+                      잔액(집행전)<br/>(천원)
+                    </th>
+                    <th className="px-4 py-2 text-right text-xs font-bold text-slate-700 uppercase">
+                      잔액(집행후)<br/>(천원)
+                    </th>
+                    <th className="px-4 py-2 text-right text-xs font-bold text-slate-700 uppercase">
                       집행률
                     </th>
                   </tr>
@@ -173,7 +184,7 @@ export default function BudgetPage() {
                 <tbody className="divide-y divide-slate-200">
                   {/* REVENUE SECTION */}
                   <tr className="bg-blue-50">
-                    <td colSpan={5} className="px-4 py-2">
+                    <td colSpan={7} className="px-4 py-2">
                       <div className="text-sm font-black text-blue-900 uppercase tracking-wide">
                         수입
                       </div>
@@ -181,7 +192,7 @@ export default function BudgetPage() {
                   </tr>
                   {Object.entries(groupedRevenue).map(([mainItem, items]) => {
                     const subtotal = calculateTotal(items);
-                    const rate = subtotal.budget === 0 ? 0 : (subtotal.executed / subtotal.budget) * 100;
+                    const rate = subtotal.current === 0 ? 0 : (subtotal.executed / subtotal.current) * 100;
 
                     return (
                       <>
@@ -190,13 +201,19 @@ export default function BudgetPage() {
                             {mainItem}
                           </td>
                           <td className="px-4 py-1.5 text-right text-sm font-semibold text-slate-900">
-                            {formatCurrency(subtotal.budget)}
+                            {formatCurrency(subtotal.initial)}
+                          </td>
+                          <td className="px-4 py-1.5 text-right text-sm font-semibold text-slate-900">
+                            {formatCurrency(subtotal.current)}
                           </td>
                           <td className="px-4 py-1.5 text-right text-sm font-semibold text-blue-700">
                             {formatCurrency(subtotal.executed)}
                           </td>
                           <td className="px-4 py-1.5 text-right text-sm font-semibold text-slate-700">
-                            {formatCurrency(subtotal.remaining)}
+                            {formatCurrency(subtotal.remainingBefore)}
+                          </td>
+                          <td className="px-4 py-1.5 text-right text-sm font-semibold text-slate-700">
+                            {formatCurrency(subtotal.remainingAfter)}
                           </td>
                           <td className="px-4 py-1.5 text-right text-sm font-semibold text-slate-900">
                             {formatPercentage(rate)}
@@ -205,16 +222,27 @@ export default function BudgetPage() {
                         {items.map(item => item.subItem && (
                           <tr key={item.id} className="hover:bg-blue-50/30">
                             <td className="px-10 py-1 text-xs text-slate-600">
-                              └ {item.subItem}
+                              <Link
+                                to={`/executions/history?projectId=${selectedProjectId}&budgetItemId=${item.id}`}
+                                className="hover:underline hover:text-blue-700"
+                              >
+                                └ {item.subItem}
+                              </Link>
+                            </td>
+                            <td className="px-4 py-1 text-right text-xs text-slate-700">
+                              {formatCurrency(item.initialBudget)}
                             </td>
                             <td className="px-4 py-1 text-right text-xs text-slate-700">
                               {formatCurrency(item.currentBudget)}
                             </td>
-                            <td className="px-4 py-1 text-right text-xs text-blue-600">
+                            <td className={`px-4 py-1 text-right text-xs ${parseFloat(item.pendingExecutionAmount || '0') > 0 ? 'text-orange-600 font-bold' : 'text-blue-600'}`}>
                               {formatCurrency(item.executedAmount)}
                             </td>
                             <td className="px-4 py-1 text-right text-xs text-slate-600">
-                              {formatCurrency(item.remainingBudget)}
+                              {formatCurrency(item.remainingBeforeExec)}
+                            </td>
+                            <td className="px-4 py-1 text-right text-xs text-slate-600">
+                              {formatCurrency(item.remainingAfterExec)}
                             </td>
                             <td className="px-4 py-1 text-right text-xs text-slate-700">
                               {formatPercentage(item.executionRate)}
@@ -229,22 +257,28 @@ export default function BudgetPage() {
                       수입 합계
                     </td>
                     <td className="px-4 py-2 text-right text-sm font-bold text-slate-900">
-                      {formatCurrency(revenueTotal.budget)}
+                      {formatCurrency(revenueTotal.initial)}
+                    </td>
+                    <td className="px-4 py-2 text-right text-sm font-bold text-slate-900">
+                      {formatCurrency(revenueTotal.current)}
                     </td>
                     <td className="px-4 py-2 text-right text-sm font-bold text-blue-700">
                       {formatCurrency(revenueTotal.executed)}
                     </td>
                     <td className="px-4 py-2 text-right text-sm font-bold text-slate-700">
-                      {formatCurrency(revenueTotal.remaining)}
+                      {formatCurrency(revenueTotal.remainingBefore)}
+                    </td>
+                    <td className="px-4 py-2 text-right text-sm font-bold text-slate-700">
+                      {formatCurrency(revenueTotal.remainingAfter)}
                     </td>
                     <td className="px-4 py-2 text-right text-sm font-bold text-slate-900">
-                      {formatPercentage(revenueTotal.budget === 0 ? 0 : (revenueTotal.executed / revenueTotal.budget) * 100)}
+                      {formatPercentage(revenueTotal.current === 0 ? 0 : (revenueTotal.executed / revenueTotal.current) * 100)}
                     </td>
                   </tr>
 
                   {/* EXPENSE SECTION */}
                   <tr className="bg-red-50">
-                    <td colSpan={5} className="px-4 py-2">
+                    <td colSpan={7} className="px-4 py-2">
                       <div className="text-sm font-black text-red-900 uppercase tracking-wide">
                         필수사업비
                       </div>
@@ -252,7 +286,7 @@ export default function BudgetPage() {
                   </tr>
                   {Object.entries(groupedExpense).map(([category, items]) => {
                     const categoryTotal = calculateTotal(items);
-                    const categoryRate = categoryTotal.budget === 0 ? 0 : (categoryTotal.executed / categoryTotal.budget) * 100;
+                    const categoryRate = categoryTotal.current === 0 ? 0 : (categoryTotal.executed / categoryTotal.current) * 100;
 
                     // Group items by mainItem
                     const itemsByMain = items.reduce((acc, item) => {
@@ -268,13 +302,19 @@ export default function BudgetPage() {
                             {category}
                           </td>
                           <td className="px-4 py-1.5 text-right text-sm font-semibold text-slate-900">
-                            {formatCurrency(categoryTotal.budget)}
+                            {formatCurrency(categoryTotal.initial)}
+                          </td>
+                          <td className="px-4 py-1.5 text-right text-sm font-semibold text-slate-900">
+                            {formatCurrency(categoryTotal.current)}
                           </td>
                           <td className="px-4 py-1.5 text-right text-sm font-semibold text-red-700">
                             {formatCurrency(categoryTotal.executed)}
                           </td>
                           <td className="px-4 py-1.5 text-right text-sm font-semibold text-slate-700">
-                            {formatCurrency(categoryTotal.remaining)}
+                            {formatCurrency(categoryTotal.remainingBefore)}
+                          </td>
+                          <td className="px-4 py-1.5 text-right text-sm font-semibold text-slate-700">
+                            {formatCurrency(categoryTotal.remainingAfter)}
                           </td>
                           <td className="px-4 py-1.5 text-right text-sm font-semibold text-slate-900">
                             {formatPercentage(categoryRate)}
@@ -282,7 +322,7 @@ export default function BudgetPage() {
                         </tr>
                         {Object.entries(itemsByMain).map(([mainItem, mainItems]) => {
                           const mainTotal = calculateTotal(mainItems);
-                          const mainRate = mainTotal.budget === 0 ? 0 : (mainTotal.executed / mainTotal.budget) * 100;
+                          const mainRate = mainTotal.current === 0 ? 0 : (mainTotal.executed / mainTotal.current) * 100;
 
                           return (
                             <>
@@ -291,13 +331,19 @@ export default function BudgetPage() {
                                   • {mainItem}
                                 </td>
                                 <td className="px-4 py-1 text-right text-xs font-medium text-slate-700">
-                                  {formatCurrency(mainTotal.budget)}
+                                  {formatCurrency(mainTotal.initial)}
+                                </td>
+                                <td className="px-4 py-1 text-right text-xs font-medium text-slate-700">
+                                  {formatCurrency(mainTotal.current)}
                                 </td>
                                 <td className="px-4 py-1 text-right text-xs font-medium text-red-600">
                                   {formatCurrency(mainTotal.executed)}
                                 </td>
                                 <td className="px-4 py-1 text-right text-xs font-medium text-slate-600">
-                                  {formatCurrency(mainTotal.remaining)}
+                                  {formatCurrency(mainTotal.remainingBefore)}
+                                </td>
+                                <td className="px-4 py-1 text-right text-xs font-medium text-slate-600">
+                                  {formatCurrency(mainTotal.remainingAfter)}
                                 </td>
                                 <td className="px-4 py-1 text-right text-xs font-medium text-slate-700">
                                   {formatPercentage(mainRate)}
@@ -306,16 +352,27 @@ export default function BudgetPage() {
                               {mainItems.map(item => item.subItem && (
                                 <tr key={item.id} className="hover:bg-red-50/20">
                                   <td className="px-12 py-0.5 text-xs text-slate-500">
-                                    └ {item.subItem}
+                                    <Link
+                                      to={`/executions/history?projectId=${selectedProjectId}&budgetItemId=${item.id}`}
+                                      className="hover:underline hover:text-red-700"
+                                    >
+                                      └ {item.subItem}
+                                    </Link>
+                                  </td>
+                                  <td className="px-4 py-0.5 text-right text-xs text-slate-600">
+                                    {formatCurrency(item.initialBudget)}
                                   </td>
                                   <td className="px-4 py-0.5 text-right text-xs text-slate-600">
                                     {formatCurrency(item.currentBudget)}
                                   </td>
-                                  <td className="px-4 py-0.5 text-right text-xs text-red-500">
+                                  <td className={`px-4 py-0.5 text-right text-xs ${parseFloat(item.pendingExecutionAmount || '0') > 0 ? 'text-orange-600 font-bold' : 'text-red-500'}`}>
                                     {formatCurrency(item.executedAmount)}
                                   </td>
                                   <td className="px-4 py-0.5 text-right text-xs text-slate-500">
-                                    {formatCurrency(item.remainingBudget)}
+                                    {formatCurrency(item.remainingBeforeExec)}
+                                  </td>
+                                  <td className="px-4 py-0.5 text-right text-xs text-slate-500">
+                                    {formatCurrency(item.remainingAfterExec)}
                                   </td>
                                   <td className="px-4 py-0.5 text-right text-xs text-slate-600">
                                     {formatPercentage(item.executionRate)}
@@ -333,16 +390,22 @@ export default function BudgetPage() {
                       필수사업비 합계
                     </td>
                     <td className="px-4 py-2 text-right text-sm font-bold text-slate-900">
-                      {formatCurrency(expenseTotal.budget)}
+                      {formatCurrency(expenseTotal.initial)}
+                    </td>
+                    <td className="px-4 py-2 text-right text-sm font-bold text-slate-900">
+                      {formatCurrency(expenseTotal.current)}
                     </td>
                     <td className="px-4 py-2 text-right text-sm font-bold text-red-700">
                       {formatCurrency(expenseTotal.executed)}
                     </td>
                     <td className="px-4 py-2 text-right text-sm font-bold text-slate-700">
-                      {formatCurrency(expenseTotal.remaining)}
+                      {formatCurrency(expenseTotal.remainingBefore)}
+                    </td>
+                    <td className="px-4 py-2 text-right text-sm font-bold text-slate-700">
+                      {formatCurrency(expenseTotal.remainingAfter)}
                     </td>
                     <td className="px-4 py-2 text-right text-sm font-bold text-slate-900">
-                      {formatPercentage(expenseTotal.budget === 0 ? 0 : (expenseTotal.executed / expenseTotal.budget) * 100)}
+                      {formatPercentage(expenseTotal.current === 0 ? 0 : (expenseTotal.executed / expenseTotal.current) * 100)}
                     </td>
                   </tr>
 
@@ -352,13 +415,19 @@ export default function BudgetPage() {
                       순손익
                     </td>
                     <td className="px-4 py-3 text-right text-base font-black text-white">
-                      {formatCurrency(netTotal.budget)}
+                      {formatCurrency(netTotal.initial)}
+                    </td>
+                    <td className="px-4 py-3 text-right text-base font-black text-white">
+                      {formatCurrency(netTotal.current)}
                     </td>
                     <td className={`px-4 py-3 text-right text-base font-black ${netTotal.executed >= 0 ? 'text-green-400' : 'text-red-400'}`}>
                       {formatCurrency(netTotal.executed)}
                     </td>
                     <td className="px-4 py-3 text-right text-base font-black text-white">
-                      {formatCurrency(netTotal.remaining)}
+                      {formatCurrency(netTotal.remainingBefore)}
+                    </td>
+                    <td className="px-4 py-3 text-right text-base font-black text-white">
+                      {formatCurrency(netTotal.remainingAfter)}
                     </td>
                     <td className="px-4 py-3 text-right text-base font-black text-white">
                       -
