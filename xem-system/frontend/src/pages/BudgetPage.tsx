@@ -131,16 +131,12 @@ export default function BudgetPage() {
                   {selectedProject.code} - {selectedProject.name} →
                 </Link>
                 <div className="flex gap-2 text-sm">
-                  <Link to="/budget/spreadsheet" className="font-semibold text-emerald-700 hover:underline">
-                    📊 스프레드시트
-                  </Link>
-                  <span className="text-slate-300">|</span>
                   <Link to="/budget/manage" className="text-slate-700 hover:underline">
                     항목 관리
                   </Link>
                   <span className="text-slate-300">|</span>
                   <Link to="/executions/history" className="text-slate-700 hover:underline">
-                    집행 히스토리
+                    집행 히스토리 & CF
                   </Link>
                 </div>
               </div>

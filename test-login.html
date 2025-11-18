@@ -1,0 +1,89 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>XEM Login Test</title>
+    <style>
+        body { font-family: Arial; padding: 20px; }
+        button { padding: 10px 20px; margin: 10px; cursor: pointer; }
+        #result { margin-top: 20px; padding: 15px; background: #f0f0f0; white-space: pre-wrap; }
+        .success { background: #d4edda; color: #155724; }
+        .error { background: #f8d7da; color: #721c24; }
+    </style>
+</head>
+<body>
+    <h1>XEM System Test</h1>
+
+    <h2>Step 1: Test Backend Connection</h2>
+    <button onclick="testBackend()">Test Backend</button>
+
+    <h2>Step 2: Test Login</h2>
+    <button onclick="testLogin()">Login as Admin</button>
+
+    <h2>Step 3: Test Projects API</h2>
+    <button onclick="testProjects()">Get Projects</button>
+
+    <div id="result"></div>
+
+    <script>
+        let token = null;
+
+        function showResult(message, isSuccess = true) {
+            const resultDiv = document.getElementById('result');
+            resultDiv.textContent = message;
+            resultDiv.className = isSuccess ? 'success' : 'error';
+        }
+
+        async function testBackend() {
+            try {
+                const response = await fetch('http://localhost:3000/api/health');
+                const data = await response.json();
+                showResult('Backend is running!\n' + JSON.stringify(data, null, 2));
+            } catch (error) {
+                showResult('Backend connection failed:\n' + error.message, false);
+            }
+        }
+
+        async function testLogin() {
+            try {
+                const response = await fetch('http://localhost:3000/api/auth/login', {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                    },
+                    body: JSON.stringify({
+                        email: 'admin@xem.com',
+                        password: 'password123'
+                    })
+                });
+
+                const data = await response.json();
+                token = data.token;
+                localStorage.setItem('xem_token', token);
+                showResult('Login successful!\nUser: ' + data.user.name + '\nToken saved!');
+            } catch (error) {
+                showResult('Login failed:\n' + error.message, false);
+            }
+        }
+
+        async function testProjects() {
+            if (!token) {
+                showResult('Please login first!', false);
+                return;
+            }
+
+            try {
+                const response = await fetch('http://localhost:3000/api/projects', {
+                    headers: {
+                        'Authorization': 'Bearer ' + token
+                    }
+                });
+
+                const data = await response.json();
+                showResult('Projects loaded successfully!\nCount: ' + data.length + '\n\n' + JSON.stringify(data, null, 2));
+            } catch (error) {
+                showResult('Failed to load projects:\n' + error.message, false);
+            }
+        }
+    </script>
+</body>
+</html>

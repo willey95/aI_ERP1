@@ -32,7 +32,6 @@ export default function Layout({ children }: LayoutProps) {
       label: '예산',
       subItems: [
         { path: '/budget', label: '개요' },
-        { path: '/budget/spreadsheet', label: '스프레드시트' },
         { path: '/budget/manage', label: '항목' },
         { path: '/budget/transfers', label: '이체' },
       ],

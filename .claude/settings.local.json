@@ -1,0 +1,42 @@
+{
+  "permissions": {
+    "allow": [
+      "Bash(npx prisma format:*)",
+      "Bash(npx prisma generate:*)",
+      "Bash(npx prisma migrate dev:*)",
+      "Bash(npx prisma db push --skip-generate)",
+      "Bash(npx tsx:*)",
+      "Bash(npm run build:*)",
+      "Bash(npm install:*)",
+      "Bash(npm run start:dev:*)",
+      "Bash(timeout 5 echo:*)",
+      "Bash(npx tsc:*)",
+      "Bash(netstat:*)",
+      "Bash(findstr:*)",
+      "Bash(curl:*)",
+      "Bash(nul)",
+      "Bash(npm run dev:*)",
+      "Bash(npx prisma db seed)",
+      "Bash(npm run seed:*)",
+      "Bash(\"E:\\coding\\aI_ERP1\\xem-system\\backend\\.env\")",
+      "Bash(timeout 3 echo:*)",
+      "Bash(taskkill:*)",
+      "Bash(timeout 8 echo:*)",
+      "Bash(find:*)",
+      "Bash(timeout 10 echo:*)",
+      "Bash(node test-workflow.js:*)",
+      "Bash(node -e:*)",
+      "Bash(npx prisma:*)",
+      "Bash(node create-test-budget.js:*)",
+      "Bash(node seed-budget-data.js:*)",
+      "Bash(src/execution/execution.service.ts)",
+      "Bash(node:*)",
+      "Bash(git checkout:*)",
+      "Bash(git add:*)",
+      "Bash(git commit:*)",
+      "Bash(del nul)"
+    ],
+    "deny": [],
+    "ask": []
+  }
+}
