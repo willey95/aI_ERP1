@@ -234,26 +234,33 @@ async function main() {
   // Create budget items for Project 1
   const budgetItems = [
     // 수입
-    { category: '수입', mainItem: '분양수입', subItem: '아파트 분양', ratio: 1.0 },
+    { category: '수입', mainItem: 'PF대출', subItem: 'PF 총액', ratio: 0.65, hasChange: false, pendingExecution: 0 },
+    { category: '수입', mainItem: '분양수입', subItem: '아파트 분양', ratio: 0.35, hasChange: false, pendingExecution: 0 },
 
-    // 지출
-    { category: '지출', mainItem: '토지비', subItem: '토지 매입비', ratio: 0.30 },
-    { category: '지출', mainItem: '공사비', subItem: '직접공사비', ratio: 0.35 },
-    { category: '지출', mainItem: '공사비', subItem: '간접공사비', ratio: 0.10 },
-    { category: '지출', mainItem: '설계비', subItem: '설계 및 감리', ratio: 0.03 },
-    { category: '지출', mainItem: '부담금', subItem: '학교용지부담금', ratio: 0.03 },
-    { category: '지출', mainItem: '부담금', subItem: '광역교통시설부담금', ratio: 0.02 },
-    { category: '지출', mainItem: '금융비용', subItem: 'PF 이자', ratio: 0.04 },
-    { category: '지출', mainItem: '마케팅비', subItem: '분양대행수수료', ratio: 0.02 },
-    { category: '지출', mainItem: '마케팅비', subItem: '광고선전비', ratio: 0.01 },
+    // 필수사업비
+    { category: '필수사업비', mainItem: '토지비', subItem: '토지 매입비', ratio: 0.30, hasChange: true, pendingExecution: 0 },
+    { category: '필수사업비', mainItem: '설계비', subItem: '설계 및 감리', ratio: 0.03, hasChange: false, pendingExecution: 500000000 },
+    { category: '필수사업비', mainItem: '부담금', subItem: '학교용지부담금', ratio: 0.03, hasChange: false, pendingExecution: 0 },
+    { category: '필수사업비', mainItem: '부담금', subItem: '광역교통시설부담금', ratio: 0.02, hasChange: false, pendingExecution: 0 },
+    { category: '필수사업비', mainItem: '금융비용', subItem: 'PF 이자', ratio: 0.04, hasChange: false, pendingExecution: 0 },
+    { category: '필수사업비', mainItem: '마케팅비', subItem: '분양대행수수료', ratio: 0.02, hasChange: false, pendingExecution: 0 },
+    { category: '필수사업비', mainItem: '마케팅비', subItem: '광고선전비', ratio: 0.01, hasChange: false, pendingExecution: 200000000 },
+
+    // 공사비
+    { category: '필수사업비', mainItem: '공사비', subItem: '직접공사비', ratio: 0.35, hasChange: false, pendingExecution: 0 },
+    { category: '필수사업비', mainItem: '공사비', subItem: '간접공사비', ratio: 0.10, hasChange: false, pendingExecution: 0 },
   ];
 
   let order = 0;
   for (const item of budgetItems) {
-    const amount = new Decimal(155000000000).times(item.ratio);
-    const executed = item.category === '지출' ? amount.times(0.64) : new Decimal(0);
-    const remaining = amount.minus(executed);
-    const rate = executed.dividedBy(amount).times(100).toNumber();
+    const initialAmount = new Decimal(155000000000).times(item.ratio);
+    // 토지비만 변경예산 적용 (5% 증액)
+    const currentAmount = item.hasChange ? initialAmount.times(1.05) : initialAmount;
+    const executed = item.category === '필수사업비' ? currentAmount.times(0.64) : new Decimal(0);
+    const pending = new Decimal(item.pendingExecution);
+    const remainingBefore = currentAmount.minus(executed);
+    const remainingAfter = remainingBefore.minus(pending);
+    const rate = currentAmount.equals(0) ? 0 : executed.dividedBy(currentAmount).times(100).toNumber();
 
     await prisma.budgetItem.create({
       data: {
@@ -261,13 +268,18 @@ async function main() {
         category: item.category,
         mainItem: item.mainItem,
         subItem: item.subItem,
-        initialBudget: amount,
-        currentBudget: amount,
+        initialBudget: initialAmount,
+        currentBudget: currentAmount,
         executedAmount: executed,
-        remainingBudget: remaining,
+        remainingBudget: remainingBefore,
+        remainingBeforeExec: remainingBefore,
+        remainingAfterExec: remainingAfter,
+        pendingExecutionAmount: pending,
         executionRate: rate,
         displayOrder: order++,
         isActive: true,
+        changeReason: item.hasChange ? '토지 매입 가격 상승으로 인한 예산 증액 (5%)' : null,
+        changedAt: item.hasChange ? new Date('2024-11-10') : null,
       },
     });
   }
@@ -277,10 +289,13 @@ async function main() {
   // Create budget items for Project 2
   order = 0;
   for (const item of budgetItems) {
-    const amount = new Decimal(100000000000).times(item.ratio);
-    const executed = item.category === '지출' ? amount.times(0.75) : new Decimal(0);
-    const remaining = amount.minus(executed);
-    const rate = amount.equals(0) ? 0 : executed.dividedBy(amount).times(100).toNumber();
+    const initialAmount = new Decimal(100000000000).times(item.ratio);
+    const currentAmount = item.hasChange ? initialAmount.times(1.05) : initialAmount;
+    const executed = item.category === '필수사업비' ? currentAmount.times(0.75) : new Decimal(0);
+    const pending = new Decimal(item.pendingExecution * 0.5); // 절반만 pending
+    const remainingBefore = currentAmount.minus(executed);
+    const remainingAfter = remainingBefore.minus(pending);
+    const rate = currentAmount.equals(0) ? 0 : executed.dividedBy(currentAmount).times(100).toNumber();
 
     await prisma.budgetItem.create({
       data: {
@@ -288,13 +303,18 @@ async function main() {
         category: item.category,
         mainItem: item.mainItem,
         subItem: item.subItem,
-        initialBudget: amount,
-        currentBudget: amount,
+        initialBudget: initialAmount,
+        currentBudget: currentAmount,
         executedAmount: executed,
-        remainingBudget: remaining,
+        remainingBudget: remainingBefore,
+        remainingBeforeExec: remainingBefore,
+        remainingAfterExec: remainingAfter,
+        pendingExecutionAmount: pending,
         executionRate: rate,
         displayOrder: order++,
         isActive: true,
+        changeReason: item.hasChange ? '토지 매입 가격 상승으로 인한 예산 증액 (5%)' : null,
+        changedAt: item.hasChange ? new Date('2024-11-10') : null,
       },
     });
   }
@@ -304,10 +324,13 @@ async function main() {
   // Create budget items for Project 3
   order = 0;
   for (const item of budgetItems) {
-    const amount = new Decimal(210000000000).times(item.ratio);
-    const executed = item.category === '지출' ? amount.times(0.90) : new Decimal(0);
-    const remaining = amount.minus(executed);
-    const rate = amount.equals(0) ? 0 : executed.dividedBy(amount).times(100).toNumber();
+    const initialAmount = new Decimal(210000000000).times(item.ratio);
+    const currentAmount = item.hasChange ? initialAmount.times(1.05) : initialAmount;
+    const executed = item.category === '필수사업비' ? currentAmount.times(0.90) : new Decimal(0);
+    const pending = new Decimal(0); // 거의 완료된 프로젝트, pending 없음
+    const remainingBefore = currentAmount.minus(executed);
+    const remainingAfter = remainingBefore.minus(pending);
+    const rate = currentAmount.equals(0) ? 0 : executed.dividedBy(currentAmount).times(100).toNumber();
 
     await prisma.budgetItem.create({
       data: {
@@ -315,13 +338,18 @@ async function main() {
         category: item.category,
         mainItem: item.mainItem,
         subItem: item.subItem,
-        initialBudget: amount,
-        currentBudget: amount,
+        initialBudget: initialAmount,
+        currentBudget: currentAmount,
         executedAmount: executed,
-        remainingBudget: remaining,
+        remainingBudget: remainingBefore,
+        remainingBeforeExec: remainingBefore,
+        remainingAfterExec: remainingAfter,
+        pendingExecutionAmount: pending,
         executionRate: rate,
         displayOrder: order++,
         isActive: true,
+        changeReason: item.hasChange ? '토지 매입 가격 상승으로 인한 예산 증액 (5%)' : null,
+        changedAt: item.hasChange ? new Date('2024-11-10') : null,
       },
     });
   }
@@ -331,10 +359,13 @@ async function main() {
   // Create budget items for Project 4
   order = 0;
   for (const item of budgetItems) {
-    const amount = new Decimal(180000000000).times(item.ratio);
-    const executed = item.category === '지출' ? amount.times(0.30) : new Decimal(0);
-    const remaining = amount.minus(executed);
-    const rate = amount.equals(0) ? 0 : executed.dividedBy(amount).times(100).toNumber();
+    const initialAmount = new Decimal(180000000000).times(item.ratio);
+    const currentAmount = item.hasChange ? initialAmount.times(1.05) : initialAmount;
+    const executed = item.category === '필수사업비' ? currentAmount.times(0.30) : new Decimal(0);
+    const pending = new Decimal(item.pendingExecution * 1.2); // 초기 단계, pending 많음
+    const remainingBefore = currentAmount.minus(executed);
+    const remainingAfter = remainingBefore.minus(pending);
+    const rate = currentAmount.equals(0) ? 0 : executed.dividedBy(currentAmount).times(100).toNumber();
 
     await prisma.budgetItem.create({
       data: {
@@ -342,13 +373,18 @@ async function main() {
         category: item.category,
         mainItem: item.mainItem,
         subItem: item.subItem,
-        initialBudget: amount,
-        currentBudget: amount,
+        initialBudget: initialAmount,
+        currentBudget: currentAmount,
         executedAmount: executed,
-        remainingBudget: remaining,
+        remainingBudget: remainingBefore,
+        remainingBeforeExec: remainingBefore,
+        remainingAfterExec: remainingAfter,
+        pendingExecutionAmount: pending,
         executionRate: rate,
         displayOrder: order++,
         isActive: true,
+        changeReason: item.hasChange ? '토지 매입 가격 상승으로 인한 예산 증액 (5%)' : null,
+        changedAt: item.hasChange ? new Date('2024-11-10') : null,
       },
     });
   }
