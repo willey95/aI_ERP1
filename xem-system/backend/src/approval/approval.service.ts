@@ -145,7 +145,9 @@ export class ApprovalService {
         // Update budget item
         const budgetItem = executionRequest.budgetItem;
         const newExecuted = budgetItem.executedAmount.plus(executionRequest.amount);
-        const newRemaining = budgetItem.currentBudget.minus(newExecuted);
+        const newPending = budgetItem.pendingExecutionAmount.minus(executionRequest.amount);
+        const newRemainingBeforeExec = budgetItem.currentBudget.minus(budgetItem.executedAmount);
+        const newRemainingAfterExec = budgetItem.currentBudget.minus(newExecuted);
         const newRate = budgetItem.currentBudget.isZero()
           ? 0
           : newExecuted.dividedBy(budgetItem.currentBudget).times(100).toNumber();
@@ -154,7 +156,10 @@ export class ApprovalService {
           where: { id: budgetItem.id },
           data: {
             executedAmount: newExecuted,
-            remainingBudget: newRemaining,
+            pendingExecutionAmount: newPending,
+            remainingBudget: newRemainingAfterExec,
+            remainingBeforeExec: newRemainingBeforeExec,
+            remainingAfterExec: newRemainingAfterExec,
             executionRate: newRate,
           },
         });
@@ -255,6 +260,17 @@ export class ApprovalService {
         data: {
           status: 'SKIPPED',
           decidedAt: new Date(),
+        },
+      });
+
+      // Decrease pending execution amount in budget item
+      const executionRequest = approval.executionRequest;
+      await tx.budgetItem.update({
+        where: { id: executionRequest.budgetItemId },
+        data: {
+          pendingExecutionAmount: {
+            decrement: executionRequest.amount,
+          },
         },
       });
 

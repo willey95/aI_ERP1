@@ -101,6 +101,14 @@ export class ExecutionService {
     // Generate request number
     const requestNumber = await this.generateRequestNumber();
 
+    // Update pending execution amount in budget item
+    await this.prisma.budgetItem.update({
+      where: { id: budgetItemId },
+      data: {
+        pendingExecutionAmount: budgetItem.pendingExecutionAmount.plus(requestAmount),
+      },
+    });
+
     // Create execution request
     const execution = await this.prisma.executionRequest.create({
       data: {
@@ -167,6 +175,14 @@ export class ExecutionService {
     if (execution.status !== 'PENDING') {
       throw new BadRequestException('Can only cancel pending requests');
     }
+
+    // Decrease pending execution amount in budget item
+    await this.prisma.budgetItem.update({
+      where: { id: execution.budgetItemId },
+      data: {
+        pendingExecutionAmount: execution.budgetItem.pendingExecutionAmount.minus(execution.amount),
+      },
+    });
 
     return this.prisma.executionRequest.update({
       where: { id },

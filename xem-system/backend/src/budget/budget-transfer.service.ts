@@ -136,6 +136,8 @@ export class BudgetTransferService {
         // 4-1. 출처 항목 예산 감소
         const newSourceBudget = transfer.sourceItem.currentBudget.minus(transfer.amount);
         const newSourceRemaining = transfer.sourceItem.remainingBudget.minus(transfer.amount);
+        const newSourceRemainingBeforeExec = newSourceBudget.minus(transfer.sourceItem.executedAmount);
+        const newSourceRemainingAfterExec = newSourceRemaining;
         const newSourceRate = newSourceBudget.equals(0)
           ? 0
           : transfer.sourceItem.executedAmount.dividedBy(newSourceBudget).times(100).toNumber();
@@ -145,6 +147,8 @@ export class BudgetTransferService {
           data: {
             currentBudget: newSourceBudget,
             remainingBudget: newSourceRemaining,
+            remainingBeforeExec: newSourceRemainingBeforeExec,
+            remainingAfterExec: newSourceRemainingAfterExec,
             executionRate: newSourceRate,
             changeReason: `예산 전용: ${transfer.amount.toString()}원 전출 (전용 ID: ${transferId})`,
             changedAt: new Date(),
@@ -154,6 +158,8 @@ export class BudgetTransferService {
         // 4-2. 대상 항목 예산 증가
         const newTargetBudget = transfer.targetItem.currentBudget.plus(transfer.amount);
         const newTargetRemaining = transfer.targetItem.remainingBudget.plus(transfer.amount);
+        const newTargetRemainingBeforeExec = newTargetBudget.minus(transfer.targetItem.executedAmount);
+        const newTargetRemainingAfterExec = newTargetRemaining;
         const newTargetRate = newTargetBudget.equals(0)
           ? 0
           : transfer.targetItem.executedAmount.dividedBy(newTargetBudget).times(100).toNumber();
@@ -163,6 +169,8 @@ export class BudgetTransferService {
           data: {
             currentBudget: newTargetBudget,
             remainingBudget: newTargetRemaining,
+            remainingBeforeExec: newTargetRemainingBeforeExec,
+            remainingAfterExec: newTargetRemainingAfterExec,
             executionRate: newTargetRate,
             changeReason: `예산 전용: ${transfer.amount.toString()}원 전입 (전용 ID: ${transferId})`,
             changedAt: new Date(),

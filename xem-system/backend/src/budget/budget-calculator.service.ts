@@ -1,9 +1,11 @@
-import { Injectable, NotFoundException, BadRequestException } from '@nestjs/common';
+import { Injectable, NotFoundException, BadRequestException, Logger } from '@nestjs/common';
 import { PrismaService } from '../prisma/prisma.service';
 import { Decimal } from '@prisma/client/runtime/library';
 
 @Injectable()
 export class BudgetCalculatorService {
+  private readonly logger = new Logger(BudgetCalculatorService.name);
+
   constructor(private prisma: PrismaService) {}
 
   // ============================================
@@ -148,7 +150,7 @@ export class BudgetCalculatorService {
           newAmount: calculatedAmount,
         });
       } catch (error) {
-        console.error(`Error calculating item ${item.id}:`, error);
+        this.logger.error(`Error calculating item ${item.id}: ${error.message}`, error.stack);
       }
     }
 
@@ -462,9 +464,20 @@ export class BudgetCalculatorService {
         expression = expression.replace(regex, value.toString());
       }
 
-      // Evaluate the expression safely
-      // WARNING: This is a simple implementation. For production, use a proper math expression parser
-      // like mathjs or expr-eval to prevent code injection
+      // Validate expression only contains safe characters
+      const safePattern = /^[\d\s+\-*/.()]+$/;
+      if (!safePattern.test(expression)) {
+        throw new Error('Formula contains unsafe characters. Only numbers, +, -, *, /, ., (, ) are allowed.');
+      }
+
+      // Prevent potential exploits
+      if (expression.includes('__') || expression.includes('constructor')) {
+        throw new Error('Formula contains forbidden patterns');
+      }
+
+      // Evaluate the expression
+      // Note: For production, consider using a dedicated math expression parser library
+      // like mathjs or expr-eval for better security
       const result = Function(`"use strict"; return (${expression})`)();
 
       if (typeof result !== 'number' || isNaN(result)) {

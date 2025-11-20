@@ -133,15 +133,24 @@ export class FinancialService {
   }
 
   async createCashFlowItem(projectId: string, data: any) {
+    const budgetAmount = new Decimal(data.budgetAmount || data.plannedAmount || 0);
+    const forecastAmount = new Decimal(data.forecastAmount || data.budgetAmount || data.plannedAmount || 0);
+    const actualAmount = new Decimal(data.actualAmount || 0);
+
     return this.prisma.cashFlowItem.create({
       data: {
         projectId,
+        budgetItemId: data.budgetItemId || null,
         type: data.type,
         category: data.category,
+        mainItem: data.mainItem,
+        subItem: data.subItem || null,
         description: data.description,
-        plannedAmount: new Decimal(data.plannedAmount),
-        actualAmount: data.actualAmount ? new Decimal(data.actualAmount) : new Decimal(0),
+        budgetAmount,
+        forecastAmount,
+        actualAmount,
         plannedDate: new Date(data.plannedDate),
+        forecastDate: data.forecastDate ? new Date(data.forecastDate) : null,
         actualDate: data.actualDate ? new Date(data.actualDate) : null,
         isRecurring: data.isRecurring || false,
         recurringMonths: data.recurringMonths,
@@ -155,13 +164,17 @@ export class FinancialService {
       data: {
         ...(data.type && { type: data.type }),
         ...(data.category && { category: data.category }),
+        ...(data.mainItem && { mainItem: data.mainItem }),
+        ...(data.subItem !== undefined && { subItem: data.subItem }),
         ...(data.description && { description: data.description }),
-        ...(data.plannedAmount && { plannedAmount: new Decimal(data.plannedAmount) }),
+        ...(data.budgetAmount !== undefined && { budgetAmount: new Decimal(data.budgetAmount) }),
+        ...(data.forecastAmount !== undefined && { forecastAmount: new Decimal(data.forecastAmount) }),
         ...(data.actualAmount !== undefined && { actualAmount: new Decimal(data.actualAmount) }),
         ...(data.plannedDate && { plannedDate: new Date(data.plannedDate) }),
-        ...(data.actualDate && { actualDate: new Date(data.actualDate) }),
+        ...(data.forecastDate !== undefined && { forecastDate: data.forecastDate ? new Date(data.forecastDate) : null }),
+        ...(data.actualDate !== undefined && { actualDate: data.actualDate ? new Date(data.actualDate) : null }),
         ...(data.isRecurring !== undefined && { isRecurring: data.isRecurring }),
-        ...(data.recurringMonths && { recurringMonths: data.recurringMonths }),
+        ...(data.recurringMonths !== undefined && { recurringMonths: data.recurringMonths }),
       },
     });
   }
@@ -185,12 +198,20 @@ export class FinancialService {
     const inflows = items.filter((item) => item.type === 'INFLOW');
     const outflows = items.filter((item) => item.type === 'OUTFLOW');
 
-    const totalPlannedInflow = inflows.reduce(
-      (sum, item) => sum.add(item.plannedAmount),
+    const totalBudgetInflow = inflows.reduce(
+      (sum, item) => sum.add(item.budgetAmount),
       new Decimal(0),
     );
-    const totalPlannedOutflow = outflows.reduce(
-      (sum, item) => sum.add(item.plannedAmount),
+    const totalBudgetOutflow = outflows.reduce(
+      (sum, item) => sum.add(item.budgetAmount),
+      new Decimal(0),
+    );
+    const totalForecastInflow = inflows.reduce(
+      (sum, item) => sum.add(item.forecastAmount),
+      new Decimal(0),
+    );
+    const totalForecastOutflow = outflows.reduce(
+      (sum, item) => sum.add(item.forecastAmount),
       new Decimal(0),
     );
     const totalActualInflow = inflows.reduce(
@@ -205,10 +226,15 @@ export class FinancialService {
     return {
       projectId,
       summary: {
-        planned: {
-          inflow: totalPlannedInflow,
-          outflow: totalPlannedOutflow,
-          net: totalPlannedInflow.minus(totalPlannedOutflow),
+        budget: {
+          inflow: totalBudgetInflow,
+          outflow: totalBudgetOutflow,
+          net: totalBudgetInflow.minus(totalBudgetOutflow),
+        },
+        forecast: {
+          inflow: totalForecastInflow,
+          outflow: totalForecastOutflow,
+          net: totalForecastInflow.minus(totalForecastOutflow),
         },
         actual: {
           inflow: totalActualInflow,
