@@ -1,9 +1,10 @@
-import { useState, useMemo } from 'react';
+import { useState, useMemo, useEffect } from 'react';
 import { useQuery } from '@tanstack/react-query';
 import { useNavigate } from 'react-router-dom';
 import api from '@/lib/api';
 import { formatCurrency, formatDate } from '@/lib/utils';
-import type { ExecutionRequest, Project, BudgetItem } from '@/types';
+import type { ExecutionRequest, Project, BudgetItem, CashFlowItem } from '@/types';
+import { useProjectStore } from '@/stores/projectStore';
 
 interface MonthlyData {
   month: string;
@@ -16,10 +17,29 @@ interface MonthlyData {
 
 export default function ExecutionHistoryPage() {
   const navigate = useNavigate();
-  const [selectedProjectId, setSelectedProjectId] = useState<string>('ALL');
+  const globalSelectedProjectId = useProjectStore((state) => state.selectedProjectId);
+  const setGlobalSelectedProjectId = useProjectStore((state) => state.setSelectedProjectId);
+
+  // Initialize from global store or default to 'ALL'
+  const [selectedProjectId, setSelectedProjectId] = useState<string>(globalSelectedProjectId || 'ALL');
   const [selectedBudgetItemId, setSelectedBudgetItemId] = useState<string>('ALL');
+
+  // Sync with global store on mount and when global changes
+  useEffect(() => {
+    if (globalSelectedProjectId && globalSelectedProjectId !== selectedProjectId) {
+      setSelectedProjectId(globalSelectedProjectId);
+    }
+  }, [globalSelectedProjectId]);
+
+  // Update global store when local selection changes
+  const handleProjectChange = (projectId: string) => {
+    setSelectedProjectId(projectId);
+    setGlobalSelectedProjectId(projectId);
+    setSelectedBudgetItemId('ALL');
+  };
   const [viewMode, setViewMode] = useState<'history' | 'forecast'>('history');
   const [timeRange, setTimeRange] = useState<'6m' | '12m' | '24m'>('12m');
+  const [activeTab, setActiveTab] = useState<'execution' | 'cashflow'>('execution');
 
   // Fetch projects
   const { data: projectsData } = useQuery({
@@ -51,8 +71,20 @@ export default function ExecutionHistoryPage() {
     enabled: selectedProjectId !== 'ALL',
   });
 
+  // Fetch cash flow data for selected project
+  const { data: cashFlowData, isLoading: cashFlowLoading } = useQuery({
+    queryKey: ['cashflow', selectedProjectId],
+    queryFn: async () => {
+      if (selectedProjectId === 'ALL') return null;
+      const response = await api.get(`/financial/cashflow/${selectedProjectId}`);
+      return response.data;
+    },
+    enabled: selectedProjectId !== 'ALL',
+  });
+
   const projects: Project[] = Array.isArray(projectsData) ? projectsData : (projectsData?.projects || []);
   const executions: ExecutionRequest[] = Array.isArray(executionsData) ? executionsData : (executionsData?.executions || []);
+  const cashFlowItems: CashFlowItem[] = Array.isArray(cashFlowData) ? cashFlowData : [];
 
   // Extract budget items from summary structure
   const budgetItems: BudgetItem[] = useMemo(() => {
@@ -75,6 +107,13 @@ export default function ExecutionHistoryPage() {
     }
     return filtered;
   }, [executions, selectedBudgetItemId]);
+
+  // Group cash flow items by type
+  const groupedCashFlow = useMemo(() => {
+    const inflows = cashFlowItems.filter(item => item.type === 'INFLOW');
+    const outflows = cashFlowItems.filter(item => item.type === 'OUTFLOW');
+    return { inflows, outflows };
+  }, [cashFlowItems]);
 
   // Generate monthly pivot data (horizontal layout)
   const monthlyPivotData = useMemo(() => {
@@ -222,10 +261,7 @@ export default function ExecutionHistoryPage() {
               <label className="eink-label">프로젝트</label>
               <select
                 value={selectedProjectId}
-                onChange={(e) => {
-                  setSelectedProjectId(e.target.value);
-                  setSelectedBudgetItemId('ALL');
-                }}
+                onChange={(e) => handleProjectChange(e.target.value)}
                 className="eink-input eink-select"
               >
                 <option value="ALL">전체 프로젝트</option>
@@ -453,79 +489,464 @@ export default function ExecutionHistoryPage() {
         </div>
       </div>
 
-      {/* Detailed Execution List */}
+      {/* Tab Navigation */}
       <div className="eink-card">
-        <div className="eink-card-header">
-          <h2 className="eink-title eink-title-md">집행 내역 상세</h2>
-        </div>
-        <div className="eink-card-body">
-          {filteredExecutions.length === 0 ? (
-            <div className="text-center py-12">
-              <p className="eink-text-muted">선택한 조건에 해당하는 집행 내역이 없습니다.</p>
-            </div>
-          ) : (
-            <div className="overflow-x-auto">
-              <table className="eink-table">
-                <thead>
-                  <tr>
-                    <th>요청번호</th>
-                    <th>프로젝트</th>
-                    <th>예산항목</th>
-                    <th className="text-right">금액</th>
-                    <th>집행일</th>
-                    <th>용도</th>
-                    <th>상태</th>
-                    <th>진행단계</th>
-                  </tr>
-                </thead>
-                <tbody>
-                  {filteredExecutions.map((execution: any) => (
-                    <tr
-                      key={execution.id}
-                      onClick={() => navigate(`/executions/${execution.id}`)}
-                      className="cursor-pointer hover:bg-eink-hover transition-colors"
-                    >
-                      <td className="eink-font-mono eink-number-sm text-blue-900 hover:underline">
-                        {execution.requestNumber}
-                      </td>
-                      <td>{execution.project?.name || '-'}</td>
-                      <td className="eink-text-sm">
-                        {execution.budgetItem?.mainItem}
-                        {execution.budgetItem?.subItem && (
-                          <span className="eink-text-muted ml-1">- {execution.budgetItem.subItem}</span>
-                        )}
-                      </td>
-                      <td className="text-right eink-number eink-number-sm">
-                        {formatCurrency(execution.amount)}
-                      </td>
-                      <td className="eink-text-sm">{formatDate(execution.executionDate)}</td>
-                      <td className="max-w-xs truncate">{execution.purpose}</td>
-                      <td>
-                        <span
-                          className={`eink-badge ${
-                            execution.status === 'APPROVED'
-                              ? 'eink-badge-success'
-                              : execution.status === 'PENDING'
-                              ? 'eink-badge-warning'
-                              : execution.status === 'REJECTED'
-                              ? 'eink-badge-danger'
-                              : 'eink-badge-info'
-                          }`}
-                        >
-                          {execution.status}
-                        </span>
-                      </td>
-                      <td className="eink-text-sm eink-text-muted">
-                        Step {execution.currentStep}/4
-                      </td>
-                    </tr>
-                  ))}
-                </tbody>
-              </table>
-            </div>
-          )}
+        <div className="eink-card-body p-0">
+          <div className="flex border-b border-ink-3">
+            <button
+              onClick={() => setActiveTab('execution')}
+              className={`flex-1 px-6 py-4 text-sm font-medium transition-colors ${
+                activeTab === 'execution'
+                  ? 'bg-ink-1 text-ink-9 border-b-2 border-ink-9'
+                  : 'bg-ink-0 text-ink-6 hover:bg-ink-1 hover:text-ink-8'
+              }`}
+            >
+              집행 히스토리
+            </button>
+            <button
+              onClick={() => setActiveTab('cashflow')}
+              className={`flex-1 px-6 py-4 text-sm font-medium transition-colors ${
+                activeTab === 'cashflow'
+                  ? 'bg-ink-1 text-ink-9 border-b-2 border-ink-9'
+                  : 'bg-ink-0 text-ink-6 hover:bg-ink-1 hover:text-ink-8'
+              }`}
+              disabled={selectedProjectId === 'ALL'}
+            >
+              CF 상세
+              {selectedProjectId === 'ALL' && (
+                <span className="ml-2 text-xs text-ink-5">(프로젝트 선택 필요)</span>
+              )}
+            </button>
+          </div>
         </div>
       </div>
+
+      {/* Execution History Tab */}
+      {activeTab === 'execution' && (
+        <div className="eink-card">
+          <div className="eink-card-header">
+            <h2 className="eink-title eink-title-md">집행 내역 상세</h2>
+          </div>
+          <div className="eink-card-body">
+            {filteredExecutions.length === 0 ? (
+              <div className="text-center py-12">
+                <p className="eink-text-muted">선택한 조건에 해당하는 집행 내역이 없습니다.</p>
+              </div>
+            ) : (
+              <div className="overflow-x-auto">
+                <table className="eink-table">
+                  <thead>
+                    <tr>
+                      <th>요청번호</th>
+                      <th>프로젝트</th>
+                      <th>예산항목</th>
+                      <th className="text-right">금액</th>
+                      <th>집행일</th>
+                      <th>용도</th>
+                      <th>상태</th>
+                      <th>진행단계</th>
+                    </tr>
+                  </thead>
+                  <tbody>
+                    {filteredExecutions.map((execution: any) => (
+                      <tr
+                        key={execution.id}
+                        onClick={() => navigate(`/executions/${execution.id}`)}
+                        className="cursor-pointer hover:bg-eink-hover transition-colors"
+                      >
+                        <td className="eink-font-mono eink-number-sm text-blue-900 hover:underline">
+                          {execution.requestNumber}
+                        </td>
+                        <td>{execution.project?.name || '-'}</td>
+                        <td className="eink-text-sm">
+                          {execution.budgetItem?.mainItem}
+                          {execution.budgetItem?.subItem && (
+                            <span className="eink-text-muted ml-1">- {execution.budgetItem.subItem}</span>
+                          )}
+                        </td>
+                        <td className="text-right eink-number eink-number-sm">
+                          {formatCurrency(execution.amount)}
+                        </td>
+                        <td className="eink-text-sm">{formatDate(execution.executionDate)}</td>
+                        <td className="max-w-xs truncate">{execution.purpose}</td>
+                        <td>
+                          <span
+                            className={`eink-badge ${
+                              execution.status === 'APPROVED'
+                                ? 'eink-badge-success'
+                                : execution.status === 'PENDING'
+                                ? 'eink-badge-warning'
+                                : execution.status === 'REJECTED'
+                                ? 'eink-badge-danger'
+                                : 'eink-badge-info'
+                            }`}
+                          >
+                            {execution.status}
+                          </span>
+                        </td>
+                        <td className="eink-text-sm eink-text-muted">
+                          Step {execution.currentStep}/4
+                        </td>
+                      </tr>
+                    ))}
+                  </tbody>
+                </table>
+              </div>
+            )}
+          </div>
+        </div>
+      )}
+
+      {/* Cash Flow Tab */}
+      {activeTab === 'cashflow' && (
+        <div className="space-y-6">
+          {cashFlowLoading ? (
+            <div className="eink-card">
+              <div className="eink-card-body text-center py-12">
+                <p className="eink-text-muted">CF 데이터 로딩 중...</p>
+              </div>
+            </div>
+          ) : cashFlowItems.length === 0 ? (
+            <div className="eink-card">
+              <div className="eink-card-body text-center py-12">
+                <p className="eink-text-muted">현금흐름 데이터가 없습니다.</p>
+              </div>
+            </div>
+          ) : (
+            <>
+              {/* INFLOW Section */}
+              {groupedCashFlow.inflows.length > 0 && (
+                <div className="eink-card">
+                  <div className="eink-card-header">
+                    <h2 className="eink-title eink-title-md">
+                      수입 (INFLOW)
+                      <span className="ml-3 text-sm font-normal text-ink-6">
+                        {groupedCashFlow.inflows.length}건
+                      </span>
+                    </h2>
+                  </div>
+                  <div className="eink-card-body">
+                    <div className="overflow-x-auto">
+                      <table className="eink-table">
+                        <thead>
+                          <tr>
+                            <th className="text-sm">항목</th>
+                            <th className="text-right text-sm">예산금액</th>
+                            <th className="text-right text-sm">전망금액</th>
+                            <th className="text-right text-sm">실집행금액</th>
+                            <th className="text-right text-sm">차이</th>
+                            <th className="text-center text-sm">집행구분</th>
+                            <th className="text-center text-sm">예정일</th>
+                            <th className="text-center text-sm">전망일</th>
+                            <th className="text-center text-sm">실행일</th>
+                          </tr>
+                        </thead>
+                        <tbody>
+                          {groupedCashFlow.inflows.map((item) => (
+                            <tr key={item.id}>
+                              <td>
+                                <div className="text-sm font-medium text-ink-9">
+                                  {item.category}
+                                </div>
+                                <div className="text-xs text-ink-6">
+                                  {item.mainItem}
+                                  {item.subItem && ` - ${item.subItem}`}
+                                </div>
+                              </td>
+                              <td className="text-right">
+                                <span className="eink-number text-base">
+                                  {formatCurrency(item.budgetAmount)}
+                                </span>
+                              </td>
+                              <td className="text-right">
+                                <span className="eink-number text-base">
+                                  {formatCurrency(item.forecastAmount)}
+                                </span>
+                              </td>
+                              <td className="text-right">
+                                <span className="eink-number text-base font-semibold">
+                                  {formatCurrency(item.actualAmount)}
+                                </span>
+                              </td>
+                              <td className="text-right">
+                                <div className="flex items-center justify-end gap-2">
+                                  <span
+                                    className={`eink-number text-base ${
+                                      item.isVarianceApproved
+                                        ? 'text-green-700'
+                                        : 'text-red-700'
+                                    }`}
+                                  >
+                                    {formatCurrency(item.varianceAmount)}
+                                  </span>
+                                  {item.isVarianceApproved ? (
+                                    <span className="text-green-600 text-lg">✓</span>
+                                  ) : (
+                                    <span className="text-red-600 text-lg">⚠</span>
+                                  )}
+                                </div>
+                              </td>
+                              <td className="text-center">
+                                <span
+                                  className={`inline-block px-3 py-1 text-xs font-medium rounded ${
+                                    item.actualExecutionType === 'ACTUAL'
+                                      ? 'bg-ink-8 text-ink-0'
+                                      : item.actualExecutionType === 'NOMINAL'
+                                      ? 'bg-ink-2 text-ink-9'
+                                      : 'bg-ink-5 text-ink-0'
+                                  }`}
+                                >
+                                  {item.actualExecutionType}
+                                </span>
+                              </td>
+                              <td className="text-center text-sm text-ink-7">
+                                {formatDate(item.plannedDate)}
+                              </td>
+                              <td className="text-center text-sm text-ink-7">
+                                {item.forecastDate ? formatDate(item.forecastDate) : '-'}
+                              </td>
+                              <td className="text-center text-sm text-ink-7">
+                                {item.actualDate ? formatDate(item.actualDate) : '-'}
+                              </td>
+                            </tr>
+                          ))}
+                        </tbody>
+                        <tfoot>
+                          <tr className="bg-ink-1 font-semibold border-t-2 border-ink-4">
+                            <td>합계</td>
+                            <td className="text-right eink-number text-base">
+                              {formatCurrency(
+                                groupedCashFlow.inflows.reduce(
+                                  (sum, item) => sum + parseFloat(item.budgetAmount.toString()),
+                                  0
+                                )
+                              )}
+                            </td>
+                            <td className="text-right eink-number text-base">
+                              {formatCurrency(
+                                groupedCashFlow.inflows.reduce(
+                                  (sum, item) => sum + parseFloat(item.forecastAmount.toString()),
+                                  0
+                                )
+                              )}
+                            </td>
+                            <td className="text-right eink-number text-base">
+                              {formatCurrency(
+                                groupedCashFlow.inflows.reduce(
+                                  (sum, item) => sum + parseFloat(item.actualAmount.toString()),
+                                  0
+                                )
+                              )}
+                            </td>
+                            <td className="text-right eink-number text-base">
+                              {formatCurrency(
+                                groupedCashFlow.inflows.reduce(
+                                  (sum, item) => sum + parseFloat(item.varianceAmount.toString()),
+                                  0
+                                )
+                              )}
+                            </td>
+                            <td colSpan={4}></td>
+                          </tr>
+                        </tfoot>
+                      </table>
+                    </div>
+                  </div>
+                </div>
+              )}
+
+              {/* OUTFLOW Section */}
+              {groupedCashFlow.outflows.length > 0 && (
+                <div className="eink-card">
+                  <div className="eink-card-header">
+                    <h2 className="eink-title eink-title-md">
+                      지출 (OUTFLOW)
+                      <span className="ml-3 text-sm font-normal text-ink-6">
+                        {groupedCashFlow.outflows.length}건
+                      </span>
+                    </h2>
+                  </div>
+                  <div className="eink-card-body">
+                    <div className="overflow-x-auto">
+                      <table className="eink-table">
+                        <thead>
+                          <tr>
+                            <th className="text-sm">항목</th>
+                            <th className="text-right text-sm">예산금액</th>
+                            <th className="text-right text-sm">전망금액</th>
+                            <th className="text-right text-sm">실집행금액</th>
+                            <th className="text-right text-sm">차이</th>
+                            <th className="text-center text-sm">집행구분</th>
+                            <th className="text-center text-sm">예정일</th>
+                            <th className="text-center text-sm">전망일</th>
+                            <th className="text-center text-sm">실행일</th>
+                          </tr>
+                        </thead>
+                        <tbody>
+                          {groupedCashFlow.outflows.map((item) => (
+                            <tr key={item.id}>
+                              <td>
+                                <div className="text-sm font-medium text-ink-9">
+                                  {item.category}
+                                </div>
+                                <div className="text-xs text-ink-6">
+                                  {item.mainItem}
+                                  {item.subItem && ` - ${item.subItem}`}
+                                </div>
+                              </td>
+                              <td className="text-right">
+                                <span className="eink-number text-base">
+                                  {formatCurrency(item.budgetAmount)}
+                                </span>
+                              </td>
+                              <td className="text-right">
+                                <span className="eink-number text-base">
+                                  {formatCurrency(item.forecastAmount)}
+                                </span>
+                              </td>
+                              <td className="text-right">
+                                <span className="eink-number text-base font-semibold">
+                                  {formatCurrency(item.actualAmount)}
+                                </span>
+                              </td>
+                              <td className="text-right">
+                                <div className="flex items-center justify-end gap-2">
+                                  <span
+                                    className={`eink-number text-base ${
+                                      item.isVarianceApproved
+                                        ? 'text-green-700'
+                                        : 'text-red-700'
+                                    }`}
+                                  >
+                                    {formatCurrency(item.varianceAmount)}
+                                  </span>
+                                  {item.isVarianceApproved ? (
+                                    <span className="text-green-600 text-lg">✓</span>
+                                  ) : (
+                                    <span className="text-red-600 text-lg">⚠</span>
+                                  )}
+                                </div>
+                              </td>
+                              <td className="text-center">
+                                <span
+                                  className={`inline-block px-3 py-1 text-xs font-medium rounded ${
+                                    item.actualExecutionType === 'ACTUAL'
+                                      ? 'bg-ink-8 text-ink-0'
+                                      : item.actualExecutionType === 'NOMINAL'
+                                      ? 'bg-ink-2 text-ink-9'
+                                      : 'bg-ink-5 text-ink-0'
+                                  }`}
+                                >
+                                  {item.actualExecutionType}
+                                </span>
+                              </td>
+                              <td className="text-center text-sm text-ink-7">
+                                {formatDate(item.plannedDate)}
+                              </td>
+                              <td className="text-center text-sm text-ink-7">
+                                {item.forecastDate ? formatDate(item.forecastDate) : '-'}
+                              </td>
+                              <td className="text-center text-sm text-ink-7">
+                                {item.actualDate ? formatDate(item.actualDate) : '-'}
+                              </td>
+                            </tr>
+                          ))}
+                        </tbody>
+                        <tfoot>
+                          <tr className="bg-ink-1 font-semibold border-t-2 border-ink-4">
+                            <td>합계</td>
+                            <td className="text-right eink-number text-base">
+                              {formatCurrency(
+                                groupedCashFlow.outflows.reduce(
+                                  (sum, item) => sum + parseFloat(item.budgetAmount.toString()),
+                                  0
+                                )
+                              )}
+                            </td>
+                            <td className="text-right eink-number text-base">
+                              {formatCurrency(
+                                groupedCashFlow.outflows.reduce(
+                                  (sum, item) => sum + parseFloat(item.forecastAmount.toString()),
+                                  0
+                                )
+                              )}
+                            </td>
+                            <td className="text-right eink-number text-base">
+                              {formatCurrency(
+                                groupedCashFlow.outflows.reduce(
+                                  (sum, item) => sum + parseFloat(item.actualAmount.toString()),
+                                  0
+                                )
+                              )}
+                            </td>
+                            <td className="text-right eink-number text-base">
+                              {formatCurrency(
+                                groupedCashFlow.outflows.reduce(
+                                  (sum, item) => sum + parseFloat(item.varianceAmount.toString()),
+                                  0
+                                )
+                              )}
+                            </td>
+                            <td colSpan={4}></td>
+                          </tr>
+                        </tfoot>
+                      </table>
+                    </div>
+                  </div>
+                </div>
+              )}
+
+              {/* Overall Summary */}
+              <div className="eink-card bg-ink-1">
+                <div className="eink-card-header">
+                  <h2 className="eink-title eink-title-md">현금흐름 요약</h2>
+                </div>
+                <div className="eink-card-body">
+                  <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
+                    <div className="space-y-2">
+                      <div className="text-sm text-ink-6">총 수입 (예산)</div>
+                      <div className="eink-number text-xl font-semibold text-green-700">
+                        {formatCurrency(
+                          groupedCashFlow.inflows.reduce(
+                            (sum, item) => sum + parseFloat(item.budgetAmount.toString()),
+                            0
+                          )
+                        )}
+                      </div>
+                    </div>
+                    <div className="space-y-2">
+                      <div className="text-sm text-ink-6">총 지출 (예산)</div>
+                      <div className="eink-number text-xl font-semibold text-red-700">
+                        {formatCurrency(
+                          groupedCashFlow.outflows.reduce(
+                            (sum, item) => sum + parseFloat(item.budgetAmount.toString()),
+                            0
+                          )
+                        )}
+                      </div>
+                    </div>
+                    <div className="space-y-2">
+                      <div className="text-sm text-ink-6">순현금흐름 (예산)</div>
+                      <div className="eink-number text-xl font-semibold text-ink-9">
+                        {formatCurrency(
+                          groupedCashFlow.inflows.reduce(
+                            (sum, item) => sum + parseFloat(item.budgetAmount.toString()),
+                            0
+                          ) -
+                            groupedCashFlow.outflows.reduce(
+                              (sum, item) => sum + parseFloat(item.budgetAmount.toString()),
+                              0
+                            )
+                        )}
+                      </div>
+                    </div>
+                  </div>
+                </div>
+              </div>
+            </>
+          )}
+        </div>
+      )}
     </div>
   );
 }

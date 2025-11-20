@@ -93,20 +93,60 @@ export default function BudgetPage() {
     remainingAfter: revenueTotal.remainingAfter - expenseTotal.remainingAfter,
   };
 
+  // Financial structure calculations
+  // 1. 총수입 = PF대출 + 분양수입
+  const totalRevenue = revenueTotal.current;
+
+  // 2. 필수사업비 (excluding 공사비)
+  const essentialCosts = expenseItems
+    .filter(item => !item.mainItem.includes('공사비'))
+    .reduce((sum, item) => sum + parseFloat(item.currentBudget || '0'), 0);
+
+  // 3. 공사비 합계 (actual from budget)
+  const constructionCosts = expenseItems
+    .filter(item => item.mainItem.includes('공사비'))
+    .reduce((sum, item) => sum + parseFloat(item.currentBudget || '0'), 0);
+
+  // 3-1. 기집행 공사비 (executed construction cost)
+  const executedConstructionCosts = expenseItems
+    .filter(item => item.mainItem.includes('공사비'))
+    .reduce((sum, item) => sum + parseFloat(item.executedAmount || '0'), 0);
+
+  // 3-2. 잔여 공사비 = 공사비 예산 - 기집행 공사비
+  const remainingConstructionCosts = constructionCosts - executedConstructionCosts;
+
+  // 4. 할인버퍼 (시행이익: 3%, 에쿼티: 2% of total revenue)
+  const discountBufferProfit = totalRevenue * 0.03; // 시행이익
+  const discountBufferEquity = totalRevenue * 0.02; // 에쿼티
+  const totalDiscountBuffer = discountBufferProfit + discountBufferEquity;
+
+  // 5. 공사비 가용예산 = 총수입 - 필수사업비(excluding 공사비)
+  const constructionBudgetLimit = totalRevenue - essentialCosts;
+
+  // 6. 공사비 회수가능성 = 총수입 - 필수사업비(excluding 공사비) + 할인버퍼(시행이익) + 할인버퍼(에쿼티)
+  const constructionRecoveryPotential = totalRevenue - essentialCosts + discountBufferProfit + discountBufferEquity;
+
+  // 7. 공사비 여유/초과 (based on 가용예산)
+  const constructionMargin = constructionBudgetLimit - constructionCosts;
+
+  // 8. 회수가능 여유/초과
+  const recoveryMargin = constructionRecoveryPotential - constructionCosts;
+
   return (
     <div>
       {/* Project Selector */}
       <div className="mb-6">
-        <label htmlFor="project" className="block text-sm font-medium text-gray-700 mb-2">
-          Select Project
+        <label htmlFor="project" className="block text-sm font-semibold text-ink-7 mb-2">
+          프로젝트 선택
         </label>
         <select
           id="project"
           value={selectedProjectId}
           onChange={(e) => setSelectedProjectId(e.target.value)}
-          className="w-full max-w-md px-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
+          className="w-96 px-4 py-2.5 text-sm border-2 border-ink-4 rounded-lg focus:outline-none focus:ring-2 focus:ring-ink-7 bg-ink-0"
+          style={{ minHeight: '42px' }}
         >
-          <option value="">-- Select a project --</option>
+          <option value="">-- 프로젝트를 선택하세요 --</option>
           {projects.map((project) => (
             <option key={project.id} value={project.id}>
               {project.code} - {project.name}
@@ -116,31 +156,31 @@ export default function BudgetPage() {
       </div>
 
       {!selectedProjectId ? (
-        <div className="bg-white rounded-lg shadow p-12 text-center">
-          <p className="text-gray-500">Please select a project to view budget details</p>
+        <div className="bg-ink-0 rounded-lg border-2 border-ink-3 p-12 text-center">
+          <p className="text-ink-6">Please select a project to view budget details</p>
         </div>
       ) : isLoading ? (
         <div className="flex items-center justify-center h-96">
-          <div className="text-lg">Loading budget data...</div>
+          <div className="text-xl">Loading budget data...</div>
         </div>
       ) : (
         <>
           {/* Project Header */}
           {selectedProject && (
-            <div className="bg-white rounded-lg shadow p-4 mb-4">
+            <div className="bg-ink-0 rounded-lg border-2 border-ink-3 p-4 mb-4">
               <div className="flex items-center justify-between">
                 <Link
                   to={`/projects/${selectedProject.id}`}
-                  className="text-lg font-bold text-slate-900 hover:underline"
+                  className="text-xl font-bold text-ink-9 hover:underline"
                 >
                   {selectedProject.code} - {selectedProject.name} →
                 </Link>
-                <div className="flex gap-2 text-sm">
-                  <Link to="/budget/manage" className="text-slate-700 hover:underline">
+                <div className="flex gap-2 text-base">
+                  <Link to="/budget/manage" className="text-ink-7 hover:underline">
                     항목 관리
                   </Link>
-                  <span className="text-slate-300">|</span>
-                  <Link to="/executions/history" className="text-slate-700 hover:underline">
+                  <span className="text-ink-4">|</span>
+                  <Link to="/executions/history" className="text-ink-7 hover:underline">
                     집행 히스토리 & CF
                   </Link>
                 </div>
@@ -148,44 +188,138 @@ export default function BudgetPage() {
             </div>
           )}
 
-          {/* Financial Model View */}
+          {/* Financial Structure Analysis */}
+          {budgetItems.length > 0 && (
+            <div className="bg-ink-0 rounded-lg border-2 border-ink-3 p-8 mb-4">
+              <h3 className="text-base font-black text-ink-9 uppercase tracking-wider mb-5 border-b-2 border-ink-3 pb-2">
+                재무 구조 분석
+              </h3>
+              <div className="grid grid-cols-4 gap-10">
+                {/* Column 1: Revenue Structure */}
+                <div className="space-y-3">
+                  <div className="text-sm font-bold text-ink-7 uppercase tracking-wide mb-4">수입 구조</div>
+                  <div className="flex justify-between items-center py-2 border-b border-ink-2">
+                    <span className="text-sm text-ink-6">총 수입</span>
+                    <span className="text-base font-bold text-ink-9">{formatCurrency(totalRevenue)}</span>
+                  </div>
+                  <div className="flex justify-between items-center py-2 pl-4">
+                    <span className="text-sm text-ink-5">→ PF대출</span>
+                    <span className="text-sm text-ink-7">{formatCurrency(revenueItems.filter(i => i.mainItem.includes('PF')).reduce((s, i) => s + parseFloat(i.currentBudget || '0'), 0))}</span>
+                  </div>
+                  <div className="flex justify-between items-center py-2 pl-4">
+                    <span className="text-sm text-ink-5">→ 분양수입</span>
+                    <span className="text-sm text-ink-7">{formatCurrency(revenueItems.filter(i => i.mainItem.includes('분양')).reduce((s, i) => s + parseFloat(i.currentBudget || '0'), 0))}</span>
+                  </div>
+                </div>
+
+                {/* Column 2: Cost Structure */}
+                <div className="space-y-3">
+                  <div className="text-sm font-bold text-ink-7 uppercase tracking-wide mb-4">비용 구조</div>
+                  <div className="flex justify-between items-center py-2 border-b border-ink-2">
+                    <span className="text-sm text-ink-6">필수사업비</span>
+                    <span className="text-base font-bold text-ink-9">{formatCurrency(essentialCosts)}</span>
+                  </div>
+                  <div className="flex justify-between items-center py-2 border-b border-ink-2">
+                    <span className="text-sm text-ink-6">잔여 공사비</span>
+                    <span className="text-base font-bold text-ink-9">{formatCurrency(remainingConstructionCosts)}</span>
+                  </div>
+                  <div className="flex justify-between items-center py-2 pl-4">
+                    <span className="text-sm text-ink-5">할인버퍼(시행이익)</span>
+                    <span className="text-sm text-ink-7">{formatCurrency(discountBufferProfit)}</span>
+                  </div>
+                  <div className="flex justify-between items-center py-2 pl-4">
+                    <span className="text-sm text-ink-5">할인버퍼(에쿼티)</span>
+                    <span className="text-sm text-ink-7">{formatCurrency(discountBufferEquity)}</span>
+                  </div>
+                </div>
+
+                {/* Column 3: Construction Budget Analysis */}
+                <div className="space-y-3">
+                  <div className="text-sm font-bold text-ink-7 uppercase tracking-wide mb-4">공사비 가용예산</div>
+                  <div className="flex justify-between items-center py-2 border-b border-ink-2">
+                    <span className="text-sm text-ink-6">가용예산</span>
+                    <span className="text-base font-bold text-ink-9">{formatCurrency(constructionBudgetLimit)}</span>
+                  </div>
+                  <div className="flex justify-between items-center py-2 border-b border-ink-2">
+                    <span className="text-sm text-ink-6">공사비 실제</span>
+                    <span className="text-base font-bold text-ink-9">{formatCurrency(constructionCosts)}</span>
+                  </div>
+                  <div className={`flex justify-between items-center py-2 border-b-2 ${constructionMargin >= 0 ? 'border-ink-5' : 'border-ink-7'}`}>
+                    <span className="text-sm font-bold text-ink-7">{constructionMargin >= 0 ? '여유' : '초과'}</span>
+                    <span className={`text-base font-black ${constructionMargin >= 0 ? 'text-ink-7' : 'text-ink-9'}`}>
+                      {formatCurrency(Math.abs(constructionMargin))}
+                    </span>
+                  </div>
+                  <div className="text-xs text-ink-5 mt-3 italic">
+                    = 총수입 - 필수사업비
+                  </div>
+                </div>
+
+                {/* Column 4: Construction Recovery Potential */}
+                <div className="space-y-3">
+                  <div className="text-sm font-bold text-ink-7 uppercase tracking-wide mb-4">공사비 회수가능성</div>
+                  <div className="flex justify-between items-center py-2 border-b border-ink-2">
+                    <span className="text-sm text-ink-6">회수가능액</span>
+                    <span className="text-base font-bold text-ink-9">{formatCurrency(constructionRecoveryPotential)}</span>
+                  </div>
+                  <div className="flex justify-between items-center py-2 border-b border-ink-2">
+                    <span className="text-sm text-ink-6">공사비 실제</span>
+                    <span className="text-base font-bold text-ink-9">{formatCurrency(constructionCosts)}</span>
+                  </div>
+                  <div className={`flex justify-between items-center py-2 border-b-2 ${recoveryMargin >= 0 ? 'border-ink-5' : 'border-ink-7'}`}>
+                    <span className="text-sm font-bold text-ink-7">{recoveryMargin >= 0 ? '회수가능' : '회수불가'}</span>
+                    <span className={`text-base font-black ${recoveryMargin >= 0 ? 'text-ink-7' : 'text-ink-9'}`}>
+                      {formatCurrency(Math.abs(recoveryMargin))}
+                    </span>
+                  </div>
+                  <div className="text-xs text-ink-5 mt-3 italic">
+                    = 가용예산 + 할인버퍼
+                  </div>
+                </div>
+              </div>
+            </div>
+          )}
+
+          {/* Simplified Budget Table */}
           {budgetItems.length === 0 ? (
-            <div className="bg-white rounded-lg shadow p-12 text-center">
-              <p className="text-gray-500">No budget items found for this project</p>
+            <div className="bg-ink-0 rounded-lg border-2 border-ink-3 p-12 text-center">
+              <p className="text-ink-6">No budget items found for this project</p>
             </div>
           ) : (
-            <div className="bg-white rounded-lg shadow overflow-hidden">
+            <div className="bg-ink-0 rounded-lg border-2 border-ink-3 overflow-hidden">
+              {/* Unit label */}
+              <div className="px-4 py-2 bg-ink-1 border-b border-ink-3">
+                <span className="text-sm text-ink-6 font-medium">단위: 천원</span>
+              </div>
+
               <table className="min-w-full">
-                <thead className="bg-slate-100">
+                <thead className="bg-ink-3">
                   <tr>
-                    <th className="px-4 py-2 text-left text-xs font-bold text-slate-700 uppercase">
+                    <th className="px-4 py-2 text-left text-sm font-bold text-ink-7 uppercase">
                       항목
                     </th>
-                    <th className="px-4 py-2 text-right text-xs font-bold text-slate-700 uppercase">
-                      최초예산<br/>(천원)
+                    <th className="px-4 py-2 text-right text-sm font-bold text-ink-7 uppercase">
+                      최초예산
                     </th>
-                    <th className="px-4 py-2 text-right text-xs font-bold text-slate-700 uppercase">
-                      변경예산<br/>(천원)
+                    <th className="px-4 py-2 text-right text-sm font-bold text-ink-7 uppercase">
+                      변경예산
                     </th>
-                    <th className="px-4 py-2 text-right text-xs font-bold text-slate-700 uppercase">
-                      기집행<br/>(천원)
+                    <th className="px-4 py-2 text-right text-sm font-bold text-ink-7 uppercase">
+                      기집행
                     </th>
-                    <th className="px-4 py-2 text-right text-xs font-bold text-slate-700 uppercase">
-                      잔액(집행전)<br/>(천원)
+                    <th className="px-4 py-2 text-right text-sm font-bold text-ink-7 uppercase">
+                      잔여예산
                     </th>
-                    <th className="px-4 py-2 text-right text-xs font-bold text-slate-700 uppercase">
-                      잔액(집행후)<br/>(천원)
-                    </th>
-                    <th className="px-4 py-2 text-right text-xs font-bold text-slate-700 uppercase">
+                    <th className="px-4 py-2 text-right text-sm font-bold text-ink-7 uppercase">
                       집행률
                     </th>
                   </tr>
                 </thead>
-                <tbody className="divide-y divide-slate-200">
+                <tbody className="divide-y divide-ink-3">
                   {/* REVENUE SECTION */}
-                  <tr className="bg-blue-50">
-                    <td colSpan={7} className="px-4 py-2">
-                      <div className="text-sm font-black text-blue-900 uppercase tracking-wide">
+                  <tr className="bg-ink-2">
+                    <td colSpan={6} className="px-4 py-2">
+                      <div className="text-base font-black text-ink-9 uppercase tracking-wide">
                         수입
                       </div>
                     </td>
@@ -196,55 +330,67 @@ export default function BudgetPage() {
 
                     return (
                       <>
-                        <tr key={mainItem} className="bg-blue-50/50">
-                          <td className="px-6 py-1.5 text-sm font-bold text-slate-800">
+                        <tr key={mainItem} className="bg-ink-1">
+                          <td className="px-6 py-1.5 text-base font-bold text-ink-8">
                             {mainItem}
                           </td>
-                          <td className="px-4 py-1.5 text-right text-sm font-semibold text-slate-900">
+                          <td className="px-4 py-1.5 text-right text-base font-semibold text-ink-9">
                             {formatCurrency(subtotal.initial)}
                           </td>
-                          <td className="px-4 py-1.5 text-right text-sm font-semibold text-slate-900">
+                          <td className="px-4 py-1.5 text-right text-base font-semibold text-ink-9">
                             {formatCurrency(subtotal.current)}
                           </td>
-                          <td className="px-4 py-1.5 text-right text-sm font-semibold text-blue-700">
+                          <td className="px-4 py-1.5 text-right text-base font-semibold text-ink-7">
                             {formatCurrency(subtotal.executed)}
                           </td>
-                          <td className="px-4 py-1.5 text-right text-sm font-semibold text-slate-700">
+                          <td className="px-4 py-1.5 text-right text-base font-semibold text-ink-7">
                             {formatCurrency(subtotal.remainingBefore)}
                           </td>
-                          <td className="px-4 py-1.5 text-right text-sm font-semibold text-slate-700">
-                            {formatCurrency(subtotal.remainingAfter)}
-                          </td>
-                          <td className="px-4 py-1.5 text-right text-sm font-semibold text-slate-900">
+                          <td className="px-4 py-1.5 text-right text-base font-semibold text-ink-9">
                             {formatPercentage(rate)}
                           </td>
                         </tr>
                         {items.map(item => item.subItem && (
-                          <tr key={item.id} className="hover:bg-blue-50/30">
-                            <td className="px-10 py-1 text-xs text-slate-600">
+                          <tr key={item.id} className="hover:bg-ink-2">
+                            <td className="px-10 py-1 text-sm text-ink-6">
                               <Link
                                 to={`/executions/history?projectId=${selectedProjectId}&budgetItemId=${item.id}`}
-                                className="hover:underline hover:text-blue-700"
+                                className="hover:underline hover:text-ink-7"
                               >
                                 └ {item.subItem}
                               </Link>
                             </td>
-                            <td className="px-4 py-1 text-right text-xs text-slate-700">
+                            <td className="px-4 py-1 text-right text-sm text-ink-7">
                               {formatCurrency(item.initialBudget)}
+                              {item.changedAt && (
+                                <div className="text-xs text-ink-5 mt-0.5">
+                                  {new Date(item.changedAt).toLocaleDateString('ko-KR', {
+                                    year: '2-digit',
+                                    month: '2-digit',
+                                    day: '2-digit'
+                                  })}
+                                </div>
+                              )}
                             </td>
-                            <td className="px-4 py-1 text-right text-xs text-slate-700">
+                            <td className="px-4 py-1 text-right text-sm text-ink-7">
                               {formatCurrency(item.currentBudget)}
+                              {item.changedAt && (
+                                <div className="text-xs text-ink-5 mt-0.5">
+                                  {new Date(item.changedAt).toLocaleDateString('ko-KR', {
+                                    year: '2-digit',
+                                    month: '2-digit',
+                                    day: '2-digit'
+                                  })}
+                                </div>
+                              )}
                             </td>
-                            <td className={`px-4 py-1 text-right text-xs ${parseFloat(item.pendingExecutionAmount || '0') > 0 ? 'text-orange-600 font-bold' : 'text-blue-600'}`}>
+                            <td className={`px-4 py-1 text-right text-sm ${parseFloat(item.pendingExecutionAmount || '0') > 0 ? 'text-ink-5 font-bold' : 'text-ink-6'}`}>
                               {formatCurrency(item.executedAmount)}
                             </td>
-                            <td className="px-4 py-1 text-right text-xs text-slate-600">
+                            <td className="px-4 py-1 text-right text-sm text-ink-6">
                               {formatCurrency(item.remainingBeforeExec)}
                             </td>
-                            <td className="px-4 py-1 text-right text-xs text-slate-600">
-                              {formatCurrency(item.remainingAfterExec)}
-                            </td>
-                            <td className="px-4 py-1 text-right text-xs text-slate-700">
+                            <td className="px-4 py-1 text-right text-sm text-ink-7">
                               {formatPercentage(item.executionRate)}
                             </td>
                           </tr>
@@ -252,34 +398,31 @@ export default function BudgetPage() {
                       </>
                     );
                   })}
-                  <tr className="bg-blue-100 border-t-2 border-blue-300">
-                    <td className="px-6 py-2 text-sm font-black text-blue-900">
+                  <tr className="bg-ink-2 border-t-2 border-ink-4">
+                    <td className="px-6 py-2 text-base font-black text-ink-9">
                       수입 합계
                     </td>
-                    <td className="px-4 py-2 text-right text-sm font-bold text-slate-900">
+                    <td className="px-4 py-2 text-right text-base font-bold text-ink-9">
                       {formatCurrency(revenueTotal.initial)}
                     </td>
-                    <td className="px-4 py-2 text-right text-sm font-bold text-slate-900">
+                    <td className="px-4 py-2 text-right text-base font-bold text-ink-9">
                       {formatCurrency(revenueTotal.current)}
                     </td>
-                    <td className="px-4 py-2 text-right text-sm font-bold text-blue-700">
+                    <td className="px-4 py-2 text-right text-base font-bold text-ink-7">
                       {formatCurrency(revenueTotal.executed)}
                     </td>
-                    <td className="px-4 py-2 text-right text-sm font-bold text-slate-700">
+                    <td className="px-4 py-2 text-right text-base font-bold text-ink-7">
                       {formatCurrency(revenueTotal.remainingBefore)}
                     </td>
-                    <td className="px-4 py-2 text-right text-sm font-bold text-slate-700">
-                      {formatCurrency(revenueTotal.remainingAfter)}
-                    </td>
-                    <td className="px-4 py-2 text-right text-sm font-bold text-slate-900">
+                    <td className="px-4 py-2 text-right text-base font-bold text-ink-9">
                       {formatPercentage(revenueTotal.current === 0 ? 0 : (revenueTotal.executed / revenueTotal.current) * 100)}
                     </td>
                   </tr>
 
                   {/* EXPENSE SECTION */}
-                  <tr className="bg-red-50">
-                    <td colSpan={7} className="px-4 py-2">
-                      <div className="text-sm font-black text-red-900 uppercase tracking-wide">
+                  <tr className="bg-ink-1">
+                    <td colSpan={6} className="px-4 py-2">
+                      <div className="text-base font-black text-ink-9 uppercase tracking-wide">
                         필수사업비
                       </div>
                     </td>
@@ -297,26 +440,23 @@ export default function BudgetPage() {
 
                     return (
                       <>
-                        <tr key={category} className="bg-red-50/70">
-                          <td className="px-6 py-1.5 text-sm font-bold text-slate-900">
+                        <tr key={category} className="bg-ink-1">
+                          <td className="px-6 py-1.5 text-base font-bold text-ink-9">
                             {category}
                           </td>
-                          <td className="px-4 py-1.5 text-right text-sm font-semibold text-slate-900">
+                          <td className="px-4 py-1.5 text-right text-base font-semibold text-ink-9">
                             {formatCurrency(categoryTotal.initial)}
                           </td>
-                          <td className="px-4 py-1.5 text-right text-sm font-semibold text-slate-900">
+                          <td className="px-4 py-1.5 text-right text-base font-semibold text-ink-9">
                             {formatCurrency(categoryTotal.current)}
                           </td>
-                          <td className="px-4 py-1.5 text-right text-sm font-semibold text-red-700">
+                          <td className="px-4 py-1.5 text-right text-base font-semibold text-ink-7">
                             {formatCurrency(categoryTotal.executed)}
                           </td>
-                          <td className="px-4 py-1.5 text-right text-sm font-semibold text-slate-700">
+                          <td className="px-4 py-1.5 text-right text-base font-semibold text-ink-7">
                             {formatCurrency(categoryTotal.remainingBefore)}
                           </td>
-                          <td className="px-4 py-1.5 text-right text-sm font-semibold text-slate-700">
-                            {formatCurrency(categoryTotal.remainingAfter)}
-                          </td>
-                          <td className="px-4 py-1.5 text-right text-sm font-semibold text-slate-900">
+                          <td className="px-4 py-1.5 text-right text-base font-semibold text-ink-9">
                             {formatPercentage(categoryRate)}
                           </td>
                         </tr>
@@ -326,55 +466,67 @@ export default function BudgetPage() {
 
                           return (
                             <>
-                              <tr key={mainItem} className="hover:bg-red-50/30">
-                                <td className="px-8 py-1 text-xs font-semibold text-slate-700">
+                              <tr key={mainItem} className="hover:bg-ink-2">
+                                <td className="px-8 py-1 text-sm font-semibold text-ink-7">
                                   • {mainItem}
                                 </td>
-                                <td className="px-4 py-1 text-right text-xs font-medium text-slate-700">
+                                <td className="px-4 py-1 text-right text-sm font-medium text-ink-7">
                                   {formatCurrency(mainTotal.initial)}
                                 </td>
-                                <td className="px-4 py-1 text-right text-xs font-medium text-slate-700">
+                                <td className="px-4 py-1 text-right text-sm font-medium text-ink-7">
                                   {formatCurrency(mainTotal.current)}
                                 </td>
-                                <td className="px-4 py-1 text-right text-xs font-medium text-red-600">
+                                <td className="px-4 py-1 text-right text-sm font-medium text-ink-6">
                                   {formatCurrency(mainTotal.executed)}
                                 </td>
-                                <td className="px-4 py-1 text-right text-xs font-medium text-slate-600">
+                                <td className="px-4 py-1 text-right text-sm font-medium text-ink-6">
                                   {formatCurrency(mainTotal.remainingBefore)}
                                 </td>
-                                <td className="px-4 py-1 text-right text-xs font-medium text-slate-600">
-                                  {formatCurrency(mainTotal.remainingAfter)}
-                                </td>
-                                <td className="px-4 py-1 text-right text-xs font-medium text-slate-700">
+                                <td className="px-4 py-1 text-right text-sm font-medium text-ink-7">
                                   {formatPercentage(mainRate)}
                                 </td>
                               </tr>
                               {mainItems.map(item => item.subItem && (
-                                <tr key={item.id} className="hover:bg-red-50/20">
-                                  <td className="px-12 py-0.5 text-xs text-slate-500">
+                                <tr key={item.id} className="hover:bg-ink-2">
+                                  <td className="px-12 py-0.5 text-sm text-ink-5">
                                     <Link
                                       to={`/executions/history?projectId=${selectedProjectId}&budgetItemId=${item.id}`}
-                                      className="hover:underline hover:text-red-700"
+                                      className="hover:underline hover:text-ink-7"
                                     >
                                       └ {item.subItem}
                                     </Link>
                                   </td>
-                                  <td className="px-4 py-0.5 text-right text-xs text-slate-600">
+                                  <td className="px-4 py-0.5 text-right text-sm text-ink-6">
                                     {formatCurrency(item.initialBudget)}
+                                    {item.changedAt && (
+                                      <div className="text-xs text-ink-5 mt-0.5">
+                                        {new Date(item.changedAt).toLocaleDateString('ko-KR', {
+                                          year: '2-digit',
+                                          month: '2-digit',
+                                          day: '2-digit'
+                                        })}
+                                      </div>
+                                    )}
                                   </td>
-                                  <td className="px-4 py-0.5 text-right text-xs text-slate-600">
+                                  <td className="px-4 py-0.5 text-right text-sm text-ink-6">
                                     {formatCurrency(item.currentBudget)}
+                                    {item.changedAt && (
+                                      <div className="text-xs text-ink-5 mt-0.5">
+                                        {new Date(item.changedAt).toLocaleDateString('ko-KR', {
+                                          year: '2-digit',
+                                          month: '2-digit',
+                                          day: '2-digit'
+                                        })}
+                                      </div>
+                                    )}
                                   </td>
-                                  <td className={`px-4 py-0.5 text-right text-xs ${parseFloat(item.pendingExecutionAmount || '0') > 0 ? 'text-orange-600 font-bold' : 'text-red-500'}`}>
+                                  <td className={`px-4 py-0.5 text-right text-sm ${parseFloat(item.pendingExecutionAmount || '0') > 0 ? 'text-ink-5 font-bold' : 'text-ink-7'}`}>
                                     {formatCurrency(item.executedAmount)}
                                   </td>
-                                  <td className="px-4 py-0.5 text-right text-xs text-slate-500">
+                                  <td className="px-4 py-0.5 text-right text-sm text-ink-5">
                                     {formatCurrency(item.remainingBeforeExec)}
                                   </td>
-                                  <td className="px-4 py-0.5 text-right text-xs text-slate-500">
-                                    {formatCurrency(item.remainingAfterExec)}
-                                  </td>
-                                  <td className="px-4 py-0.5 text-right text-xs text-slate-600">
+                                  <td className="px-4 py-0.5 text-right text-sm text-ink-6">
                                     {formatPercentage(item.executionRate)}
                                   </td>
                                 </tr>
@@ -385,51 +537,45 @@ export default function BudgetPage() {
                       </>
                     );
                   })}
-                  <tr className="bg-red-100 border-t-2 border-red-300">
-                    <td className="px-6 py-2 text-sm font-black text-red-900">
+                  <tr className="bg-ink-1 border-t-2 border-ink-4">
+                    <td className="px-6 py-2 text-base font-black text-ink-9">
                       필수사업비 합계
                     </td>
-                    <td className="px-4 py-2 text-right text-sm font-bold text-slate-900">
+                    <td className="px-4 py-2 text-right text-base font-bold text-ink-9">
                       {formatCurrency(expenseTotal.initial)}
                     </td>
-                    <td className="px-4 py-2 text-right text-sm font-bold text-slate-900">
+                    <td className="px-4 py-2 text-right text-base font-bold text-ink-9">
                       {formatCurrency(expenseTotal.current)}
                     </td>
-                    <td className="px-4 py-2 text-right text-sm font-bold text-red-700">
+                    <td className="px-4 py-2 text-right text-base font-bold text-ink-7">
                       {formatCurrency(expenseTotal.executed)}
                     </td>
-                    <td className="px-4 py-2 text-right text-sm font-bold text-slate-700">
+                    <td className="px-4 py-2 text-right text-base font-bold text-ink-7">
                       {formatCurrency(expenseTotal.remainingBefore)}
                     </td>
-                    <td className="px-4 py-2 text-right text-sm font-bold text-slate-700">
-                      {formatCurrency(expenseTotal.remainingAfter)}
-                    </td>
-                    <td className="px-4 py-2 text-right text-sm font-bold text-slate-900">
+                    <td className="px-4 py-2 text-right text-base font-bold text-ink-9">
                       {formatPercentage(expenseTotal.current === 0 ? 0 : (expenseTotal.executed / expenseTotal.current) * 100)}
                     </td>
                   </tr>
 
                   {/* NET TOTAL */}
-                  <tr className="bg-slate-900 border-t-4 border-slate-700">
-                    <td className="px-6 py-3 text-base font-black text-white uppercase tracking-wide">
+                  <tr className="bg-ink-9 border-t-4 border-ink-7">
+                    <td className="px-6 py-3 text-lg font-black text-ink-0 uppercase tracking-wide">
                       순손익
                     </td>
-                    <td className="px-4 py-3 text-right text-base font-black text-white">
+                    <td className="px-4 py-3 text-right text-lg font-black text-ink-0">
                       {formatCurrency(netTotal.initial)}
                     </td>
-                    <td className="px-4 py-3 text-right text-base font-black text-white">
+                    <td className="px-4 py-3 text-right text-lg font-black text-ink-0">
                       {formatCurrency(netTotal.current)}
                     </td>
-                    <td className={`px-4 py-3 text-right text-base font-black ${netTotal.executed >= 0 ? 'text-green-400' : 'text-red-400'}`}>
+                    <td className={`px-4 py-3 text-right text-lg font-black ${netTotal.executed >= 0 ? 'text-ink-0' : 'text-ink-0'}`}>
                       {formatCurrency(netTotal.executed)}
                     </td>
-                    <td className="px-4 py-3 text-right text-base font-black text-white">
+                    <td className="px-4 py-3 text-right text-lg font-black text-ink-0">
                       {formatCurrency(netTotal.remainingBefore)}
                     </td>
-                    <td className="px-4 py-3 text-right text-base font-black text-white">
-                      {formatCurrency(netTotal.remainingAfter)}
-                    </td>
-                    <td className="px-4 py-3 text-right text-base font-black text-white">
+                    <td className="px-4 py-3 text-right text-lg font-black text-ink-0">
                       -
                     </td>
                   </tr>

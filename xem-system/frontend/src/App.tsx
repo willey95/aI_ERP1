@@ -9,7 +9,6 @@ import ProjectNewPage from './pages/ProjectNewPage';
 import ProjectDetailPage from './pages/ProjectDetailPage';
 import BudgetPage from './pages/BudgetPage';
 import BudgetManagementPage from './pages/BudgetManagementPage';
-import BudgetSpreadsheetPage from './pages/BudgetSpreadsheetPage';
 import BudgetTransferPage from './pages/BudgetTransferPage';
 import ExecutionsPage from './pages/ExecutionsPage';
 import ExecutionRequestCreatePage from './pages/ExecutionRequestCreatePage';
@@ -111,14 +110,6 @@ function App() {
           }
         />
         <Route
-          path="/budget/spreadsheet"
-          element={
-            <ProtectedRoute>
-              <BudgetSpreadsheetPage />
-            </ProtectedRoute>
-          }
-        />
-        <Route
           path="/budget/transfers"
           element={
             <ProtectedRoute>
@@ -195,6 +186,14 @@ function App() {
           element={
             <ProtectedRoute>
               <FinancialModelPage />
+            </ProtectedRoute>
+          }
+        />
+        <Route
+          path="/cashflow"
+          element={
+            <ProtectedRoute>
+              <CashFlowPage />
             </ProtectedRoute>
           }
         />

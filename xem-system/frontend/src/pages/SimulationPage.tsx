@@ -407,37 +407,37 @@ export default function SimulationPage() {
             {/* Key Metrics */}
             <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
               <div className="bg-white rounded-xl border border-stone-200 p-6 shadow-sm">
-                <div className="text-sm text-stone-600 mb-1">예상 ROI</div>
-                <div className="text-3xl font-bold text-stone-900 font-mono">
+                <div className="text-xs text-stone-600 mb-1">예상 ROI</div>
+                <div className="text-2xl font-bold text-stone-900 font-mono">
                   {currentResult.projectedROI?.toFixed(2)}%
                 </div>
-                <div className="text-xs text-stone-500 mt-1">투자 대비 수익률</div>
+                <div className="text-[10px] text-stone-500 mt-1">투자 대비 수익률</div>
               </div>
 
               <div className="bg-white rounded-xl border border-stone-200 p-6 shadow-sm">
-                <div className="text-sm text-stone-600 mb-1">예상 수익</div>
-                <div className="text-3xl font-bold text-stone-900 font-mono">
+                <div className="text-xs text-stone-600 mb-1">예상 수익</div>
+                <div className="text-2xl font-bold text-stone-900 font-mono">
                   {formatCurrency(currentResult.projectedProfit)}
                 </div>
-                <div className="text-xs text-stone-500 mt-1">총 프로젝트 수익</div>
+                <div className="text-[10px] text-stone-500 mt-1">총 프로젝트 수익</div>
               </div>
 
               <div className="bg-white rounded-xl border border-stone-200 p-6 shadow-sm">
-                <div className="text-sm text-stone-600 mb-1">최저 현금</div>
-                <div className="text-3xl font-bold text-stone-900 font-mono">
+                <div className="text-xs text-stone-600 mb-1">최저 현금</div>
+                <div className="text-2xl font-bold text-stone-900 font-mono">
                   {formatCurrency(currentResult.lowestCash)}
                 </div>
-                <div className="text-xs text-stone-500 mt-1">
+                <div className="text-[10px] text-stone-500 mt-1">
                   {currentResult.lowestCashMonth}개월차
                 </div>
               </div>
 
               <div className="bg-white rounded-xl border border-stone-200 p-6 shadow-sm">
-                <div className="text-sm text-stone-600 mb-1">시나리오</div>
-                <div className="text-2xl font-bold text-stone-900">
+                <div className="text-xs text-stone-600 mb-1">시나리오</div>
+                <div className="text-xl font-bold text-stone-900">
                   {currentResult.scenario}
                 </div>
-                <div className="text-xs text-stone-500 mt-1">현재 분석 중</div>
+                <div className="text-[10px] text-stone-500 mt-1">현재 분석 중</div>
               </div>
             </div>
 

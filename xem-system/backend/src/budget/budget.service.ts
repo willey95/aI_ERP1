@@ -42,8 +42,16 @@ export class BudgetService {
             (sum, item) => sum.plus(item.executedAmount),
             new Decimal(0)
           ),
-          remainingBudget: items.reduce(
-            (sum, item) => sum.plus(item.remainingBudget),
+          remainingBeforeExec: items.reduce(
+            (sum, item) => sum.plus(item.remainingBeforeExec),
+            new Decimal(0)
+          ),
+          remainingAfterExec: items.reduce(
+            (sum, item) => sum.plus(item.remainingAfterExec),
+            new Decimal(0)
+          ),
+          pendingExecutionAmount: items.reduce(
+            (sum, item) => sum.plus(item.pendingExecutionAmount),
             new Decimal(0)
           ),
         },
@@ -64,8 +72,16 @@ export class BudgetService {
         (sum, item) => sum.plus(item.executedAmount),
         new Decimal(0)
       ),
-      remainingBudget: budgetItems.reduce(
-        (sum, item) => sum.plus(item.remainingBudget),
+      remainingBeforeExec: budgetItems.reduce(
+        (sum, item) => sum.plus(item.remainingBeforeExec),
+        new Decimal(0)
+      ),
+      remainingAfterExec: budgetItems.reduce(
+        (sum, item) => sum.plus(item.remainingAfterExec),
+        new Decimal(0)
+      ),
+      pendingExecutionAmount: budgetItems.reduce(
+        (sum, item) => sum.plus(item.pendingExecutionAmount),
         new Decimal(0)
       ),
     };
@@ -118,7 +134,6 @@ export class BudgetService {
         initialBudget: budget,
         currentBudget: budget,
         executedAmount: new Decimal(0),
-        remainingBudget: budget,
         remainingBeforeExec: budget,
         remainingAfterExec: budget,
         pendingExecutionAmount: new Decimal(0),
@@ -166,7 +181,6 @@ export class BudgetService {
             initialBudget: budget,
             currentBudget: budget,
             executedAmount: new Decimal(0),
-            remainingBudget: budget,
             remainingBeforeExec: budget,
             remainingAfterExec: budget,
             pendingExecutionAmount: new Decimal(0),

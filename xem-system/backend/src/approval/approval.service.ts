@@ -40,7 +40,9 @@ export class ApprovalService {
               select: {
                 mainItem: true,
                 subItem: true,
-                remainingBudget: true,
+                remainingBeforeExec: true,
+                remainingAfterExec: true,
+                pendingExecutionAmount: true,
               },
             },
             requestedBy: {
@@ -114,9 +116,9 @@ export class ApprovalService {
         const budgetItem = executionRequest.budgetItem;
         const requestAmount = executionRequest.amount;
 
-        if (requestAmount.greaterThan(budgetItem.remainingBudget)) {
+        if (requestAmount.greaterThan(budgetItem.remainingBeforeExec)) {
           throw new BadRequestException(
-            `Insufficient budget. Requested: ${requestAmount}, Available: ${budgetItem.remainingBudget}`
+            `Insufficient budget. Requested: ${requestAmount}, Available: ${budgetItem.remainingBeforeExec}`
           );
         }
       }
@@ -156,7 +158,7 @@ export class ApprovalService {
           where: { id: budgetItem.id },
           data: {
             executedAmount: newExecuted,
-            pendingExecutionAmount: newPending,
+            pendingExecutionAmount: newPending.greaterThanOrEqualTo(0) ? newPending : new Decimal(0),
             remainingBudget: newRemainingAfterExec,
             remainingBeforeExec: newRemainingBeforeExec,
             remainingAfterExec: newRemainingAfterExec,

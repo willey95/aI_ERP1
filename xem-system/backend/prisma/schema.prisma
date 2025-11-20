@@ -170,8 +170,8 @@ model BudgetItem {
   initialBudget       Decimal @db.Decimal(20, 2) // 최초 예산
   currentBudget       Decimal @db.Decimal(20, 2) // 변경 예산 (마지막 회차)
   executedAmount      Decimal @default(0) @db.Decimal(20, 2) // 기집행액
-  remainingBeforeExec Decimal @db.Decimal(20, 2) // 잔액(집행전)
-  remainingAfterExec  Decimal @db.Decimal(20, 2) // 잔액(집행후)
+  remainingBeforeExec Decimal @default(0) @db.Decimal(20, 2) // 잔액(집행전)
+  remainingAfterExec  Decimal @default(0) @db.Decimal(20, 2) // 잔액(집행후)
   executionRate       Float   @default(0) // 집행률
 
   // NEW: Pending execution tracking

@@ -85,7 +85,7 @@ export class MailService {
     projectName: string;
     budgetItem: string;
     executionRate: number;
-    remainingBudget: number;
+    remainingBeforeExec: number;
   }) {
     const subject = `[XEM] ⚠️ Budget Threshold Alert - ${data.projectName}`;
     const html = this.getBudgetThresholdTemplate(data);
@@ -369,7 +369,7 @@ export class MailService {
     projectName: string;
     budgetItem: string;
     executionRate: number;
-    remainingBudget: number;
+    remainingBeforeExec: number;
   }): string {
     return `
 <!DOCTYPE html>
@@ -416,8 +416,8 @@ export class MailService {
           <span class="value" style="color: #dd6b20; font-size: 18px; font-weight: bold;">${data.executionRate.toFixed(2)}%</span>
         </div>
         <div class="info-row" style="border-bottom: none;">
-          <span class="label">Remaining Budget:</span>
-          <span class="value" style="font-weight: bold;">₩${data.remainingBudget.toLocaleString()}</span>
+          <span class="label">Remaining Budget (Before Exec):</span>
+          <span class="value" style="font-weight: bold;">₩${data.remainingBeforeExec.toLocaleString()}</span>
         </div>
       </div>
 

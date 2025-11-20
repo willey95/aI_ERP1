@@ -1,4 +1,5 @@
-import { Controller, Get, Post, Put, Body, Param, UseGuards } from '@nestjs/common';
+import { Controller, Get, Post, Put, Delete, Body, Param, UseGuards, Res } from '@nestjs/common';
+import { Response } from 'express';
 import { JwtAuthGuard } from '../auth/jwt-auth.guard';
 import { FinancialService } from './financial.service';
 import { CurrentUser } from '../auth/current-user.decorator';
@@ -85,5 +86,47 @@ export class FinancialController {
   @Get('cashflow/:projectId/summary')
   async getCashFlowSummary(@Param('projectId') projectId: string) {
     return this.financialService.getCashFlowSummary(projectId);
+  }
+
+  @Delete('cashflow/:id')
+  async deleteCashFlowItem(@Param('id') id: string) {
+    return this.financialService.deleteCashFlowItem(id);
+  }
+
+  @Post('cashflow/:id/approve-variance')
+  async approveVariance(
+    @Param('id') id: string,
+    @CurrentUser() user: any,
+  ) {
+    return this.financialService.approveVariance(id, user.id);
+  }
+
+  @Get('cashflow/:projectId/export')
+  async exportCashFlowExcel(
+    @Param('projectId') projectId: string,
+    @Res() res: Response,
+  ) {
+    const buffer = await this.financialService.exportCashFlowToExcel(projectId);
+
+    res.setHeader(
+      'Content-Type',
+      'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet',
+    );
+    res.setHeader(
+      'Content-Disposition',
+      `attachment; filename=cashflow_${projectId}_${new Date().toISOString().split('T')[0]}.xlsx`,
+    );
+
+    res.send(buffer);
+  }
+
+  @Get('cashflow/:projectId/analytics')
+  async getCashFlowAnalytics(@Param('projectId') projectId: string) {
+    return this.financialService.getCashFlowAnalytics(projectId);
+  }
+
+  @Get('cashflow/:projectId/pivot')
+  async getCashFlowPivot(@Param('projectId') projectId: string) {
+    return this.financialService.getCashFlowPivot(projectId);
   }
 }

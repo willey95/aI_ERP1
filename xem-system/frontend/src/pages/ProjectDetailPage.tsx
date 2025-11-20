@@ -115,7 +115,6 @@ export default function ProjectDetailPage() {
             onClick={() => navigate(`/simulation/${id}`)}
             className="p-4 border-2 border-stone-200 rounded-lg hover:border-stone-900 hover:bg-stone-50 transition-all group"
           >
-            <div className="text-2xl mb-2">📊</div>
             <div className="font-semibold text-gray-900">시나리오 분석</div>
             <div className="text-xs text-gray-500 mt-1">다양한 변수로 예측</div>
           </button>
@@ -124,7 +123,6 @@ export default function ProjectDetailPage() {
             onClick={() => navigate(`/financial/${id}`)}
             className="p-4 border-2 border-stone-200 rounded-lg hover:border-stone-900 hover:bg-stone-50 transition-all group"
           >
-            <div className="text-2xl mb-2">💼</div>
             <div className="font-semibold text-gray-900">재무 모델</div>
             <div className="text-xs text-gray-500 mt-1">36개월 재무 전망</div>
           </button>
@@ -133,7 +131,6 @@ export default function ProjectDetailPage() {
             onClick={() => navigate(`/cashflow/${id}`)}
             className="p-4 border-2 border-stone-200 rounded-lg hover:border-stone-900 hover:bg-stone-50 transition-all group"
           >
-            <div className="text-2xl mb-2">💵</div>
             <div className="font-semibold text-gray-900">현금 흐름</div>
             <div className="text-xs text-gray-500 mt-1">유입/유출 관리</div>
           </button>
@@ -142,7 +139,6 @@ export default function ProjectDetailPage() {
             onClick={() => navigate(`/calculator/${id}`)}
             className="p-4 border-2 border-stone-200 rounded-lg hover:border-stone-900 hover:bg-stone-50 transition-all group"
           >
-            <div className="text-2xl mb-2">🧮</div>
             <div className="font-semibold text-gray-900">예산 계산기</div>
             <div className="text-xs text-gray-500 mt-1">수식 기반 계산</div>
           </button>
