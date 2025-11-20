@@ -53,14 +53,20 @@ cd xem-system
 
 모든 계정의 비밀번호: `password123`
 
-| 이메일 | 역할 | 권한 |
+| 이메일 | 역할 | 워크플로우 권한 |
 |--------|------|------|
 | admin@xem.com | 관리자 | 전체 권한 |
-| cfo@xem.com | CFO | 4단계 최종 승인 |
-| rm@xem.com | RM팀 | 3단계 승인 |
-| teamlead@xem.com | 팀장 | 2단계 승인 |
-| staff1@xem.com | 직원1 | 1단계 승인 |
-| staff2@xem.com | 직원2 | 1단계 승인 |
+| **approver1@xem.com** | **승인권자** | **2단계 승인 (최종 승인)** ⭐ |
+| **approver2@xem.com** | **승인권자** | **2단계 승인 (최종 승인)** ⭐ |
+| cfo@xem.com | CFO | 관리자 권한 |
+| rm@xem.com | RM팀 | 관리자 권한 |
+| teamlead@xem.com | 팀장 | 프로젝트 관리 |
+| staff1@xem.com | 담당자 | 집행 요청 작성 |
+| staff2@xem.com | 담당자 | 집행 요청 작성 |
+
+**📌 새로운 2단계 워크플로우:**
+- **1단계**: 담당자(STAFF) - 자동 승인
+- **2단계**: 승인권자(APPROVER) - 수동 승인 ✅
 
 ---
 
@@ -73,6 +79,28 @@ cd xem-system
 ---
 
 ## 🛠 문제 해결
+
+### Docker 컨테이너 충돌 ⚠️
+
+**에러 메시지:**
+```
+Error: The container name "/xem-postgres" is already in use
+```
+
+**빠른 해결:**
+```bash
+# 방법 1: 자동 스크립트 사용 (권장)
+./docker-reset.sh          # 완전 초기화
+# 또는
+./docker-restart.sh        # 단순 재시작
+
+# 방법 2: 수동 명령어
+docker compose down -v     # 컨테이너 제거
+docker compose up -d       # 재시작
+docker compose exec backend npm run seed  # Seed 데이터
+```
+
+**자세한 해결 방법:** [DOCKER_TROUBLESHOOTING.md](./DOCKER_TROUBLESHOOTING.md) 참고
 
 ### 포트가 이미 사용 중
 ```bash
@@ -90,7 +118,7 @@ cd xem-system
 ```bash
 # Docker 재시작
 ./stop.sh --docker
-docker-compose up -d
+docker compose up -d
 
 # 데이터베이스 리셋
 ./reset-db.sh
@@ -123,60 +151,106 @@ cat frontend.log
 
 ## 📊 시스템 워크플로우
 
-### 집행 요청 프로세스
+### 새로운 2단계 집행 요청 프로세스 ⭐
 
 ```
-1. 직원이 집행 요청 생성
+1. 담당자(STAFF)가 집행 요청 생성
    ↓
-2. STAFF 승인 (1단계)
+2. STAFF 자동 승인 (1단계) ✅
    ↓
-3. TEAM_LEAD 승인 (2단계)
+3. APPROVER 수동 승인 (2단계) 👤
    ↓
-4. RM_TEAM 승인 (3단계)
+4. 예산 자동 업데이트
+```
+
+### 예산 전용 프로세스 (신규 기능!)
+
+```
+1. 담당자가 품의 작성 시 예산 가용성 확인 💡
    ↓
-5. CFO 최종 승인 (4단계)
-   ↓
-6. 예산 자동 업데이트
+2-A. 예산 충분 ✅
+     → 집행 요청만 생성
+
+2-B. 예산 부족 ❌
+     → 시스템이 전용 시나리오 자동 제안
+     → 담당자가 시나리오 선택
+     → 예산 전용 + 집행 요청 통합 제출
+     ↓
+3. APPROVER가 상세 대시보드에서 확인:
+   - 예산 가용성 체크
+   - 공사비 영향 분석
+   - 예산 전용 내역 검토
+   - 시스템 추천 의견 확인
+     ↓
+4. 승인 또는 반려
 ```
 
 ### 테스트 시나리오
 
+#### 시나리오 1: 예산 충분한 경우
+
 1. **staff1@xem.com으로 로그인**
-   - 집행 요청 생성
+   - Executions → New Request 클릭
+   - 프로젝트 선택: 강남 아파트 개발
+   - 예산 항목: 공사비 - 전기공사
+   - 집행 금액: 100,000,000원
+   - 💡 예산 가용성 확인 → ✅ 충분
+   - 집행 요청 제출
 
-2. **staff2@xem.com으로 로그인**
-   - 1단계 승인 (STAFF)
+2. **approver1@xem.com으로 로그인**
+   - Approvals → 대기 중인 요청 확인
+   - 상세 분석 페이지 검토
+   - ✅ 승인
 
-3. **teamlead@xem.com으로 로그인**
-   - 2단계 승인 (TEAM_LEAD)
+#### 시나리오 2: 예산 부족 + 전용
 
-4. **rm@xem.com으로 로그인**
-   - 3단계 승인 (RM_TEAM)
+1. **staff1@xem.com으로 로그인**
+   - Executions → New Request 클릭
+   - 프로젝트: 강남 아파트 개발
+   - 예산 항목: 공사비 - 토목공사 (잔액 부족)
+   - 집행 금액: 500,000,000원
+   - 💡 예산 가용성 확인 → ❌ 부족 (2억원)
+   - 전용 시나리오 자동 제안 확인
+   - 시나리오 선택 (건축공사 → 토목공사)
+   - 집행 요청 제출
 
-5. **cfo@xem.com으로 로그인**
-   - 4단계 최종 승인 (CFO)
-   - 예산 자동 업데이트 확인
+2. **approver1@xem.com으로 로그인**
+   - Approvals → 대기 중인 요청 확인
+   - 상세 분석 확인:
+     * 예산 항목 분석
+     * 공사비 영향 분석 ⚠️
+     * 예산 전용 내역 (2억원 전용)
+     * 시스템 추천 의견
+   - ✅ 승인 또는 ❌ 반려
 
 ---
 
-## 🐛 알려진 이슈
+## ✅ 최신 업데이트 (v3.1)
 
-**⚠️ 주의**: 현재 버전은 개발 버전으로, 프로덕션 배포 전 반드시 `DEBUGGING_REPORT.md`의 P0 이슈를 수정해야 합니다.
+### 새로운 기능
+- ✅ **2단계 승인 워크플로우** (STAFF → APPROVER)
+- ✅ **예산 전용 시스템** (돈의 꼬리표)
+- ✅ **품의 작성 지원** (실시간 예산 체크 + 전용 시나리오 제안)
+- ✅ **승인권자용 상세 대시보드** (6개 분석 섹션)
+- ✅ **공사비 영향 분석** (훼손 위험 자동 감지)
+- ✅ **시스템 추천 의견** (INFO/WARNING/CRITICAL)
 
-주요 이슈:
-- 역할 기반 권한 검증 미구현
-- 트랜잭션 처리 미구현
-- 모바일 반응형 미지원
-
-자세한 내용은 `DEBUGGING_REPORT.md` 참조
+### 수정된 주요 이슈
+- ✅ RolesGuard 및 RBAC 구현
+- ✅ Transaction 처리 (Prisma $transaction)
+- ✅ DTO 구조 통일 (Frontend/Backend)
+- ✅ Division by zero 수정
+- ✅ Database indexes 추가 (18개)
 
 ---
 
 ## 📚 추가 문서
 
+- [Docker 문제 해결](DOCKER_TROUBLESHOOTING.md) - Docker 충돌 및 문제 해결 상세 가이드
+- [워크플로우 검증 보고서](WORKFLOW_VERIFICATION_REPORT.md) - 담당자/승인권자 Agent 분석
+- [P1/P2 개선사항](P1_P2_ENHANCEMENTS_REPORT.md) - 환경 변수 검증, Rate Limiting, Health Check 등
 - [전체 README](README.md) - 상세 시스템 문서
 - [디버깅 리포트](DEBUGGING_REPORT.md) - 발견된 이슈 및 수정 가이드
-- [구현 가이드](../XEM_Complete_Implementation_Guide.md) - 시스템 설계 문서
 
 ---
 

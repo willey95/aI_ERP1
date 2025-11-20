@@ -32,7 +32,7 @@ export default function ExecutionRequestCreatePage() {
     },
   });
 
-  const projects = projectsData || [];
+  const projects = Array.isArray(projectsData) ? projectsData : (projectsData?.projects || []);
 
   // Fetch budget items for selected project
   const { data: budgetItemsData } = useQuery({
@@ -45,7 +45,15 @@ export default function ExecutionRequestCreatePage() {
     enabled: !!selectedProject,
   });
 
-  const budgetItems = budgetItemsData?.budgetItems || [];
+  // Extract budget items from summary structure
+  const budgetItems: any[] = [];
+  if (budgetItemsData?.summary && Array.isArray(budgetItemsData.summary)) {
+    budgetItemsData.summary.forEach((category: any) => {
+      if (category.items && Array.isArray(category.items)) {
+        budgetItems.push(...category.items);
+      }
+    });
+  }
 
   // 품의 작성 지원 조회
   const checkAssistance = async () => {

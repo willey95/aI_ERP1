@@ -42,8 +42,16 @@ export class BudgetService {
             (sum, item) => sum.plus(item.executedAmount),
             new Decimal(0)
           ),
-          remainingBudget: items.reduce(
-            (sum, item) => sum.plus(item.remainingBudget),
+          remainingBeforeExec: items.reduce(
+            (sum, item) => sum.plus(item.remainingBeforeExec),
+            new Decimal(0)
+          ),
+          remainingAfterExec: items.reduce(
+            (sum, item) => sum.plus(item.remainingAfterExec),
+            new Decimal(0)
+          ),
+          pendingExecutionAmount: items.reduce(
+            (sum, item) => sum.plus(item.pendingExecutionAmount),
             new Decimal(0)
           ),
         },
@@ -64,8 +72,16 @@ export class BudgetService {
         (sum, item) => sum.plus(item.executedAmount),
         new Decimal(0)
       ),
-      remainingBudget: budgetItems.reduce(
-        (sum, item) => sum.plus(item.remainingBudget),
+      remainingBeforeExec: budgetItems.reduce(
+        (sum, item) => sum.plus(item.remainingBeforeExec),
+        new Decimal(0)
+      ),
+      remainingAfterExec: budgetItems.reduce(
+        (sum, item) => sum.plus(item.remainingAfterExec),
+        new Decimal(0)
+      ),
+      pendingExecutionAmount: budgetItems.reduce(
+        (sum, item) => sum.plus(item.pendingExecutionAmount),
         new Decimal(0)
       ),
     };
@@ -118,7 +134,9 @@ export class BudgetService {
         initialBudget: budget,
         currentBudget: budget,
         executedAmount: new Decimal(0),
-        remainingBudget: budget,
+        remainingBeforeExec: budget,
+        remainingAfterExec: budget,
+        pendingExecutionAmount: new Decimal(0),
         executionRate: 0,
         displayOrder: displayOrder || 0,
       },
@@ -126,6 +144,60 @@ export class BudgetService {
 
     await this.updateProjectBudget(projectId);
     return budgetItem;
+  }
+
+  async bulkImport(items: any[]) {
+    if (!items || items.length === 0) {
+      throw new Error('No items to import');
+    }
+
+    // Get the projectId from the first item
+    const projectId = items[0].projectId;
+
+    // Validate that all items have the same projectId
+    const allSameProject = items.every(item => item.projectId === projectId);
+    if (!allSameProject) {
+      throw new Error('All items must belong to the same project');
+    }
+
+    // Create all budget items
+    const createdItems = await Promise.all(
+      items.map(async (item, index) => {
+        const {
+          category,
+          mainItem,
+          subItem,
+          currentBudget,
+        } = item;
+
+        const budget = new Decimal(currentBudget);
+
+        return this.prisma.budgetItem.create({
+          data: {
+            projectId,
+            category,
+            mainItem,
+            subItem: subItem || null,
+            initialBudget: budget,
+            currentBudget: budget,
+            executedAmount: new Decimal(0),
+            remainingBeforeExec: budget,
+            remainingAfterExec: budget,
+            pendingExecutionAmount: new Decimal(0),
+            executionRate: 0,
+            displayOrder: index,
+          },
+        });
+      })
+    );
+
+    // Update project budget once after all items are created
+    await this.updateProjectBudget(projectId);
+
+    return {
+      created: createdItems.length,
+      items: createdItems,
+    };
   }
 
   async update(id: string, data: any) {

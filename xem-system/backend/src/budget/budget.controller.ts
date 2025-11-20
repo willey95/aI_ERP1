@@ -12,6 +12,7 @@ import { JwtAuthGuard } from '../auth/jwt-auth.guard';
 import { BudgetService } from './budget.service';
 import { CreateBudgetItemDto } from './dto/create-budget-item.dto';
 import { UpdateBudgetItemDto } from './dto/update-budget-item.dto';
+import { BulkImportBudgetDto } from './dto/bulk-import-budget.dto';
 
 @Controller('budget')
 @UseGuards(JwtAuthGuard)
@@ -31,6 +32,11 @@ export class BudgetController {
   @Post()
   async create(@Body() createBudgetItemDto: CreateBudgetItemDto) {
     return this.budgetService.create(createBudgetItemDto);
+  }
+
+  @Post('bulk-import')
+  async bulkImport(@Body() bulkImportDto: BulkImportBudgetDto) {
+    return this.budgetService.bulkImport(bulkImportDto.items);
   }
 
   @Put(':id')

@@ -40,7 +40,9 @@ export class ApprovalService {
               select: {
                 mainItem: true,
                 subItem: true,
-                remainingBudget: true,
+                remainingBeforeExec: true,
+                remainingAfterExec: true,
+                pendingExecutionAmount: true,
               },
             },
             requestedBy: {
@@ -114,9 +116,9 @@ export class ApprovalService {
         const budgetItem = executionRequest.budgetItem;
         const requestAmount = executionRequest.amount;
 
-        if (requestAmount.greaterThan(budgetItem.remainingBudget)) {
+        if (requestAmount.greaterThan(budgetItem.remainingBeforeExec)) {
           throw new BadRequestException(
-            `Insufficient budget. Requested: ${requestAmount}, Available: ${budgetItem.remainingBudget}`
+            `Insufficient budget. Requested: ${requestAmount}, Available: ${budgetItem.remainingBeforeExec}`
           );
         }
       }
@@ -145,7 +147,9 @@ export class ApprovalService {
         // Update budget item
         const budgetItem = executionRequest.budgetItem;
         const newExecuted = budgetItem.executedAmount.plus(executionRequest.amount);
-        const newRemaining = budgetItem.currentBudget.minus(newExecuted);
+        const newPending = budgetItem.pendingExecutionAmount.minus(executionRequest.amount);
+        const newRemainingBeforeExec = budgetItem.currentBudget.minus(budgetItem.executedAmount);
+        const newRemainingAfterExec = budgetItem.currentBudget.minus(newExecuted);
         const newRate = budgetItem.currentBudget.isZero()
           ? 0
           : newExecuted.dividedBy(budgetItem.currentBudget).times(100).toNumber();
@@ -154,14 +158,17 @@ export class ApprovalService {
           where: { id: budgetItem.id },
           data: {
             executedAmount: newExecuted,
-            remainingBudget: newRemaining,
+            pendingExecutionAmount: newPending.greaterThanOrEqualTo(0) ? newPending : new Decimal(0),
+            remainingBudget: newRemainingAfterExec,
+            remainingBeforeExec: newRemainingBeforeExec,
+            remainingAfterExec: newRemainingAfterExec,
             executionRate: newRate,
           },
         });
 
         // Update project totals (within transaction)
         const budgetItems = await tx.budgetItem.findMany({
-          where: { projectId: executionRequest.projectId },
+          where: { projectId: executionRequest.projectId, isActive: true },
         });
 
         const totalBudget = budgetItems.reduce(
@@ -255,6 +262,17 @@ export class ApprovalService {
         data: {
           status: 'SKIPPED',
           decidedAt: new Date(),
+        },
+      });
+
+      // Decrease pending execution amount in budget item
+      const executionRequest = approval.executionRequest;
+      await tx.budgetItem.update({
+        where: { id: executionRequest.budgetItemId },
+        data: {
+          pendingExecutionAmount: {
+            decrement: executionRequest.amount,
+          },
         },
       });
 

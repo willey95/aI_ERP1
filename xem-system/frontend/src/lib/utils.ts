@@ -7,14 +7,14 @@ export function cn(...inputs: ClassValue[]) {
 
 export function formatCurrency(value: number | string): string {
   const num = typeof value === 'string' ? parseFloat(value) : value;
-  const billion = num / 100000000;
+  // Convert to thousands (천원 단위)
+  const thousands = num / 1000;
 
-  if (billion >= 1) {
-    return `₩${billion.toFixed(0)}억`;
-  }
-
-  const million = num / 10000;
-  return `₩${million.toFixed(0)}만`;
+  // Format with thousand separators
+  return thousands.toLocaleString('ko-KR', {
+    minimumFractionDigits: 0,
+    maximumFractionDigits: 0
+  });
 }
 
 export function formatPercentage(value: number): string {

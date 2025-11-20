@@ -44,15 +44,15 @@ export class BudgetTransferService {
         throw new BadRequestException('Transfer amount must be greater than 0');
       }
 
-      if (transferAmount.greaterThan(sourceItem.remainingBudget)) {
+      if (transferAmount.greaterThan(sourceItem.remainingBeforeExec)) {
         throw new BadRequestException(
-          `Insufficient budget. Available: ${sourceItem.remainingBudget}, Requested: ${transferAmount}`
+          `Insufficient budget. Available: ${sourceItem.remainingBeforeExec}, Requested: ${transferAmount}`
         );
       }
 
       // 5. FULL 전용인 경우 전체 잔액으로 설정
       const finalAmount = dto.transferType === 'FULL'
-        ? sourceItem.remainingBudget
+        ? sourceItem.remainingBeforeExec
         : transferAmount;
 
       // 6. 예산 전용 생성
@@ -75,7 +75,9 @@ export class BudgetTransferService {
               category: true,
               mainItem: true,
               subItem: true,
-              remainingBudget: true,
+              remainingBeforeExec: true,
+              remainingAfterExec: true,
+              pendingExecutionAmount: true,
             },
           },
           targetItem: {
@@ -84,7 +86,9 @@ export class BudgetTransferService {
               category: true,
               mainItem: true,
               subItem: true,
-              remainingBudget: true,
+              remainingBeforeExec: true,
+              remainingAfterExec: true,
+              pendingExecutionAmount: true,
             },
           },
           createdBy: {
@@ -135,7 +139,8 @@ export class BudgetTransferService {
         // 4. 승인: 예산 전용 실행
         // 4-1. 출처 항목 예산 감소
         const newSourceBudget = transfer.sourceItem.currentBudget.minus(transfer.amount);
-        const newSourceRemaining = transfer.sourceItem.remainingBudget.minus(transfer.amount);
+        const newSourceRemainingBeforeExec = newSourceBudget.minus(transfer.sourceItem.executedAmount);
+        const newSourceRemainingAfterExec = newSourceRemainingBeforeExec.minus(transfer.sourceItem.pendingExecutionAmount);
         const newSourceRate = newSourceBudget.equals(0)
           ? 0
           : transfer.sourceItem.executedAmount.dividedBy(newSourceBudget).times(100).toNumber();
@@ -144,7 +149,9 @@ export class BudgetTransferService {
           where: { id: transfer.sourceItemId },
           data: {
             currentBudget: newSourceBudget,
-            remainingBudget: newSourceRemaining,
+            remainingBudget: newSourceRemainingAfterExec,
+            remainingBeforeExec: newSourceRemainingBeforeExec,
+            remainingAfterExec: newSourceRemainingAfterExec,
             executionRate: newSourceRate,
             changeReason: `예산 전용: ${transfer.amount.toString()}원 전출 (전용 ID: ${transferId})`,
             changedAt: new Date(),
@@ -153,7 +160,8 @@ export class BudgetTransferService {
 
         // 4-2. 대상 항목 예산 증가
         const newTargetBudget = transfer.targetItem.currentBudget.plus(transfer.amount);
-        const newTargetRemaining = transfer.targetItem.remainingBudget.plus(transfer.amount);
+        const newTargetRemainingBeforeExec = newTargetBudget.minus(transfer.targetItem.executedAmount);
+        const newTargetRemainingAfterExec = newTargetRemainingBeforeExec.minus(transfer.targetItem.pendingExecutionAmount);
         const newTargetRate = newTargetBudget.equals(0)
           ? 0
           : transfer.targetItem.executedAmount.dividedBy(newTargetBudget).times(100).toNumber();
@@ -162,7 +170,9 @@ export class BudgetTransferService {
           where: { id: transfer.targetItemId },
           data: {
             currentBudget: newTargetBudget,
-            remainingBudget: newTargetRemaining,
+            remainingBudget: newTargetRemainingAfterExec,
+            remainingBeforeExec: newTargetRemainingBeforeExec,
+            remainingAfterExec: newTargetRemainingAfterExec,
             executionRate: newTargetRate,
             changeReason: `예산 전용: ${transfer.amount.toString()}원 전입 (전용 ID: ${transferId})`,
             changedAt: new Date(),
@@ -274,7 +284,9 @@ export class BudgetTransferService {
             mainItem: true,
             subItem: true,
             currentBudget: true,
-            remainingBudget: true,
+            remainingBeforeExec: true,
+            remainingAfterExec: true,
+            pendingExecutionAmount: true,
           },
         },
         targetItem: {
@@ -284,7 +296,9 @@ export class BudgetTransferService {
             mainItem: true,
             subItem: true,
             currentBudget: true,
-            remainingBudget: true,
+            remainingBeforeExec: true,
+            remainingAfterExec: true,
+            pendingExecutionAmount: true,
           },
         },
         createdBy: {
@@ -349,7 +363,9 @@ export class BudgetTransferService {
             category: true,
             mainItem: true,
             subItem: true,
-            remainingBudget: true,
+            remainingBeforeExec: true,
+            remainingAfterExec: true,
+            pendingExecutionAmount: true,
             projectId: true,
           },
         },
@@ -359,7 +375,9 @@ export class BudgetTransferService {
             category: true,
             mainItem: true,
             subItem: true,
-            remainingBudget: true,
+            remainingBeforeExec: true,
+            remainingAfterExec: true,
+            pendingExecutionAmount: true,
             projectId: true,
           },
         },
@@ -473,13 +491,15 @@ export class BudgetTransferService {
       new Decimal(0)
     );
 
-    const availableForTransfer = budgetItem.remainingBudget.minus(pendingOutAmount);
+    const availableForTransfer = budgetItem.remainingBeforeExec.minus(pendingOutAmount);
 
     return {
       budgetItemId,
       currentBudget: budgetItem.currentBudget,
       executedAmount: budgetItem.executedAmount,
-      remainingBudget: budgetItem.remainingBudget,
+      remainingBeforeExec: budgetItem.remainingBeforeExec,
+      remainingAfterExec: budgetItem.remainingAfterExec,
+      pendingExecutionAmount: budgetItem.pendingExecutionAmount,
       pendingTransferOut: pendingOutAmount,
       availableForTransfer: availableForTransfer.greaterThan(0) ? availableForTransfer : new Decimal(0),
     };

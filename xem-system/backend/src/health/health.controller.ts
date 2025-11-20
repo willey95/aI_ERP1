@@ -31,9 +31,10 @@ export class HealthController {
       () => this.memory.checkHeap('memory_heap', 150 * 1024 * 1024),
 
       // Storage health check (Disk usage should not exceed 90%)
+      // Note: Use process.cwd() for cross-platform compatibility
       () =>
         this.disk.checkStorage('storage', {
-          path: '/',
+          path: process.cwd(),
           thresholdPercent: 0.9,
         }),
     ]);

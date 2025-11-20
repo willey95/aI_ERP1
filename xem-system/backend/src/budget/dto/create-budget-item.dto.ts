@@ -12,6 +12,11 @@ export class CreateBudgetItemDto {
   projectId: string;
 
   @IsString()
+  @IsNotEmpty({ message: 'Category is required' })
+  @MaxLength(50, { message: 'Category must not exceed 50 characters' })
+  category: string;
+
+  @IsString()
   @IsNotEmpty({ message: 'Main item is required' })
   @MaxLength(100, { message: 'Main item must not exceed 100 characters' })
   mainItem: string;
@@ -21,13 +26,8 @@ export class CreateBudgetItemDto {
   @MaxLength(100, { message: 'Sub item must not exceed 100 characters' })
   subItem: string;
 
-  @IsNumber({}, { message: 'Initial budget must be a number' })
-  @Min(0, { message: 'Initial budget must be greater than or equal to 0' })
-  @IsNotEmpty({ message: 'Initial budget is required' })
-  initialBudget: number;
-
-  @IsNumber({}, { message: 'Current budget must be a number' })
-  @Min(0, { message: 'Current budget must be greater than or equal to 0' })
-  @IsNotEmpty({ message: 'Current budget is required' })
+  @IsNumber({}, { message: 'Budget amount must be a number' })
+  @Min(0, { message: 'Budget amount must be greater than or equal to 0' })
+  @IsNotEmpty({ message: 'Budget amount is required' })
   currentBudget: number;
 }

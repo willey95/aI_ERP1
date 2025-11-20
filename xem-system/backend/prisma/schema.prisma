@@ -15,28 +15,28 @@ datasource db {
 // ============================================
 
 model User {
-  id            String   @id @default(uuid())
-  email         String   @unique
-  password      String   // bcrypt hashed
-  name          String
-  role          UserRole @default(STAFF)
-  department    String?
-  position      String?
-  phone         String?
-  isActive      Boolean  @default(true)
-  createdAt     DateTime @default(now())
-  updatedAt     DateTime @updatedAt
-  lastLoginAt   DateTime?
+  id          String    @id @default(uuid())
+  email       String    @unique
+  password    String // bcrypt hashed
+  name        String
+  role        UserRole  @default(STAFF)
+  department  String?
+  position    String?
+  phone       String?
+  isActive    Boolean   @default(true)
+  createdAt   DateTime  @default(now())
+  updatedAt   DateTime  @updatedAt
+  lastLoginAt DateTime?
 
   // Relations
-  createdProjects      Project[]       @relation("ProjectCreator")
-  assignedProjects     ProjectMember[]
-  executionRequests    ExecutionRequest[] @relation("ExecutionRequestor")
-  approvals            Approval[]
-  createdTransfers     BudgetTransfer[] @relation("TransferCreator")
-  approvedTransfers    BudgetTransfer[] @relation("TransferApprover")
-  notifications        Notification[]
-  activityLogs         ActivityLog[]
+  createdProjects   Project[]          @relation("ProjectCreator")
+  assignedProjects  ProjectMember[]
+  executionRequests ExecutionRequest[] @relation("ExecutionRequestor")
+  approvals         Approval[]
+  createdTransfers  BudgetTransfer[]   @relation("TransferCreator")
+  approvedTransfers BudgetTransfer[]   @relation("TransferApprover")
+  notifications     Notification[]
+  activityLogs      ActivityLog[]
 
   @@index([email])
   @@index([role])
@@ -44,13 +44,13 @@ model User {
 }
 
 enum UserRole {
-  ADMIN      // 시스템 관리자
-  CFO        // 재무총괄
-  RM_TEAM    // RM팀
-  TEAM_LEAD  // 팀장
-  APPROVER   // 승인권자 (품의 승인)
-  STAFF      // 담당자 (인출담당자)
-  VIEWER     // 읽기 전용
+  ADMIN // 시스템 관리자
+  CFO // 재무총괄
+  RM_TEAM // RM팀
+  TEAM_LEAD // 팀장
+  APPROVER // 승인권자 (품의 승인)
+  STAFF // 담당자 (인출담당자)
+  VIEWER // 읽기 전용
 }
 
 // ============================================
@@ -58,43 +58,49 @@ enum UserRole {
 // ============================================
 
 model Project {
-  id                String        @id @default(uuid())
-  code              String        @unique // 프로젝트 코드 (예: PRJ-2024-001)
-  name              String
-  location          String
-  projectType       ProjectType
-  status            ProjectStatus @default(PLANNING)
+  id          String        @id @default(uuid())
+  code        String        @unique // 프로젝트 코드 (예: PRJ-2024-001)
+  name        String
+  location    String
+  projectType ProjectType
+  status      ProjectStatus @default(PLANNING)
 
   // Basic Info
-  landArea          Float         // 대지면적 (m²)
-  buildingArea      Float         // 건축면적 (m²)
-  totalFloorArea    Float         // 연면적 (m²)
-  units             Int           // 세대수
+  landArea       Float // 대지면적 (m²)
+  buildingArea   Float // 건축면적 (m²)
+  totalFloorArea Float // 연면적 (m²)
+  units          Int // 세대수
 
   // Dates
-  startDate         DateTime?
-  completionDate    DateTime?
-  salesStartDate    DateTime?
+  startDate      DateTime?
+  completionDate DateTime?
+  salesStartDate DateTime?
+
+  // Phase Tracking (단계별 날짜 기록)
+  preContractDate       DateTime? // 수주전 단계
+  internalApprovalDate  DateTime? // 내부승인 단계
+  constructionStartDate DateTime? // 착공 단계
+  currentPhase          ProjectPhase @default(PRE_CONTRACT) // 현재 진행 단계
 
   // Financial Summary (실시간 계산됨)
-  initialBudget     Decimal       @db.Decimal(20, 2) // 최초 예산
-  currentBudget     Decimal       @db.Decimal(20, 2) // 현재 예산
-  executedAmount    Decimal       @db.Decimal(20, 2) @default(0) // 집행액
-  remainingBudget   Decimal       @db.Decimal(20, 2) // 잔액
-  executionRate     Float         @default(0) // 집행률 (%)
+  initialBudget   Decimal @db.Decimal(20, 2) // 최초 예산
+  currentBudget   Decimal @db.Decimal(20, 2) // 현재 예산
+  executedAmount  Decimal @default(0) @db.Decimal(20, 2) // 집행액
+  remainingBudget Decimal @db.Decimal(20, 2) // 잔액
+  executionRate   Float   @default(0) // 집행률 (%)
 
   // ROI & Risk
-  expectedProfit    Decimal       @db.Decimal(20, 2) // 예상 이익
-  roi               Float         @default(0) // ROI (%)
-  riskScore         Int           @default(0) // 리스크 점수 (0-100)
+  expectedProfit Decimal @db.Decimal(20, 2) // 예상 이익
+  roi            Float   @default(0) // ROI (%)
+  riskScore      Int     @default(0) // 리스크 점수 (0-100)
 
   // Metadata
-  createdById       String
-  createdAt         DateTime      @default(now())
-  updatedAt         DateTime      @updatedAt
+  createdById String
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
 
   // Relations
-  creator           User          @relation("ProjectCreator", fields: [createdById], references: [id])
+  creator           User               @relation("ProjectCreator", fields: [createdById], references: [id])
   members           ProjectMember[]
   budgetItems       BudgetItem[]
   executionRequests ExecutionRequest[]
@@ -112,28 +118,34 @@ model Project {
 }
 
 enum ProjectType {
-  SELF        // 자체사업
-  SPC         // SPC사업
-  JOINT       // 공동사업
+  SELF // 자체사업
+  SPC // SPC사업
+  JOINT // 공동사업
   COOPERATIVE // 협력사업
 }
 
 enum ProjectStatus {
-  PLANNING    // 기획중
-  ACTIVE      // 진행중
-  COMPLETED   // 완료
-  SUSPENDED   // 중단
+  PLANNING // 기획중
+  ACTIVE // 진행중
+  COMPLETED // 완료
+  SUSPENDED // 중단
+}
+
+enum ProjectPhase {
+  PRE_CONTRACT // 수주전
+  INTERNAL_APPROVAL // 내부승인
+  CONSTRUCTION // 착공단계
 }
 
 model ProjectMember {
-  id          String   @id @default(uuid())
-  projectId   String
-  userId      String
-  role        String   // 프로젝트 내 역할
-  joinedAt    DateTime @default(now())
+  id        String   @id @default(uuid())
+  projectId String
+  userId    String
+  role      String // 프로젝트 내 역할
+  joinedAt  DateTime @default(now())
 
-  project     Project  @relation(fields: [projectId], references: [id], onDelete: Cascade)
-  user        User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  project Project @relation(fields: [projectId], references: [id], onDelete: Cascade)
+  user    User    @relation(fields: [userId], references: [id], onDelete: Cascade)
 
   @@unique([projectId, userId])
   @@index([userId])
@@ -146,41 +158,224 @@ model ProjectMember {
 // ============================================
 
 model BudgetItem {
-  id                String      @id @default(uuid())
-  projectId         String
+  id        String @id @default(uuid())
+  projectId String
 
   // Hierarchy (3-level)
-  category          String      // 대분류: 수입/지출
-  mainItem          String      // 중분류: 토지비, 공사비, 분양수입 등
-  subItem           String?     // 소분류: 세부 항목
+  category String // 대분류: 수입/지출
+  mainItem String // 중분류: 토지비, 공사비, 분양수입 등
+  subItem  String? // 소분류: 세부 항목
 
   // Budget Amounts
-  initialBudget     Decimal     @db.Decimal(20, 2) // 최초 예산
-  currentBudget     Decimal     @db.Decimal(20, 2) // 변경 예산
-  executedAmount    Decimal     @db.Decimal(20, 2) @default(0) // 집행액
-  remainingBudget   Decimal     @db.Decimal(20, 2) // 잔액
-  executionRate     Float       @default(0) // 집행률
+  initialBudget       Decimal @db.Decimal(20, 2) // 최초 예산
+  currentBudget       Decimal @db.Decimal(20, 2) // 변경 예산 (마지막 회차)
+  executedAmount      Decimal @default(0) @db.Decimal(20, 2) // 기집행액
+  remainingBeforeExec Decimal @default(0) @db.Decimal(20, 2) // 잔액(집행전)
+  remainingAfterExec  Decimal @default(0) @db.Decimal(20, 2) // 잔액(집행후)
+  executionRate       Float   @default(0) // 집행률
+
+  // NEW: Pending execution tracking
+  pendingExecutionAmount Decimal @default(0) @db.Decimal(20, 2) // 금회 집행 예정액
+
+  // Calculation Support
+  isCalculable     Boolean  @default(false) // 계산 가능 항목 여부
+  formulaId        String? // 연결된 공식 ID
+  calculatedAmount Decimal? @db.Decimal(20, 2) // 계산된 금액
 
   // Change History
-  changeReason      String?     // 변경 사유
-  changedAt         DateTime?   // 변경일
+  changeReason String? // 변경 사유
+  changedAt    DateTime? // 변경일
 
   // Metadata
-  displayOrder      Int         @default(0) // 표시 순서
-  isActive          Boolean     @default(true)
-  createdAt         DateTime    @default(now())
-  updatedAt         DateTime    @updatedAt
+  displayOrder Int      @default(0) // 표시 순서
+  isActive     Boolean  @default(true)
+  createdAt    DateTime @default(now())
+  updatedAt    DateTime @updatedAt
 
   // Relations
-  project           Project     @relation(fields: [projectId], references: [id], onDelete: Cascade)
-  executionRequests ExecutionRequest[]
-  transfersFrom     BudgetTransfer[] @relation("TransferSource")
-  transfersTo       BudgetTransfer[] @relation("TransferTarget")
+  project            Project              @relation(fields: [projectId], references: [id], onDelete: Cascade)
+  formula            BudgetFormula?       @relation(fields: [formulaId], references: [id])
+  executionRequests  ExecutionRequest[]
+  transfersFrom      BudgetTransfer[]     @relation("TransferSource")
+  transfersTo        BudgetTransfer[]     @relation("TransferTarget")
+  calculationHistory CalculationHistory[]
+  budgetHistory      BudgetHistory[] // NEW
 
   @@index([projectId])
   @@index([category])
   @@index([projectId, isActive])
+  @@index([formulaId])
   @@map("budget_items")
+}
+
+// NEW: Budget Change History
+model BudgetHistory {
+  id           String @id @default(uuid())
+  budgetItemId String
+  projectId    String
+
+  // Change tracking
+  revision       Int // 변경 회차 (1, 2, 3, ...)
+  previousBudget Decimal @db.Decimal(20, 2) // 변경 전 예산
+  newBudget      Decimal @db.Decimal(20, 2) // 변경 후 예산
+  changeAmount   Decimal @db.Decimal(20, 2) // 변경액 (+ 증액, - 감액)
+
+  // Details
+  changeReason String    @db.Text // 변경 사유
+  approvedBy   String? // 승인자 ID
+  approvedAt   DateTime? // 승인일
+
+  // Metadata
+  createdBy String
+  createdAt DateTime @default(now())
+
+  // Relations
+  budgetItem BudgetItem @relation(fields: [budgetItemId], references: [id], onDelete: Cascade)
+
+  @@index([budgetItemId])
+  @@index([projectId])
+  @@index([revision])
+  @@map("budget_history")
+}
+
+// NEW: PF Financing
+model PFFinancing {
+  id        String @id @default(uuid())
+  projectId String @unique
+
+  // PF Details
+  totalAmount     Decimal @db.Decimal(20, 2) // PF 총액
+  disbursedAmount Decimal @default(0) @db.Decimal(20, 2) // 실행액
+  remainingAmount Decimal @db.Decimal(20, 2) // 잔액
+
+  interestRate Float // 이자율 (%)
+  lender       String // 대출 기관
+  startDate    DateTime // 대출 시작일
+  maturityDate DateTime // 만기일
+
+  // Metadata
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@map("pf_financing")
+}
+
+// NEW: Sales Revenue (분양 실적)
+model SalesRevenue {
+  id        String @id @default(uuid())
+  projectId String
+
+  // Sales data
+  unitsSold       Int // 분양 세대수
+  totalRevenue    Decimal @db.Decimal(20, 2) // 분양대금 총액
+  collectedAmount Decimal @default(0) @db.Decimal(20, 2) // 수금액
+  remainingAmount Decimal @db.Decimal(20, 2) // 미수금
+
+  // Period
+  salesDate  DateTime // 분양일
+  contractNo String? // 계약번호
+
+  // Metadata
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@index([projectId])
+  @@index([salesDate])
+  @@map("sales_revenue")
+}
+
+// NEW: Discount Buffer (할인버퍼)
+model DiscountBuffer {
+  id        String @id @default(uuid())
+  projectId String @unique
+
+  // Buffer items
+  developerProfit Decimal @db.Decimal(20, 2) // 시행이익
+  equity          Decimal @db.Decimal(20, 2) // 에쿼티
+  contingency     Decimal @default(0) @db.Decimal(20, 2) // 예비비
+
+  // Risk assessment
+  totalBuffer      Decimal @db.Decimal(20, 2) // 총 버퍼
+  constructionCost Decimal @db.Decimal(20, 2) // 공사비
+  riskLevel        String  @default("SAFE") // SAFE, WARNING, CRITICAL
+
+  // Notes
+  notes String? @db.Text
+
+  // Metadata
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@map("discount_buffers")
+}
+
+// Budget Calculation Support Models
+
+model BudgetFormula {
+  id          String   @id @default(uuid())
+  name        String // 공식 이름 (예: "인건비 계산")
+  category    String // 카테고리 (예: "공사비", "설계비")
+  formula     String   @db.Text // 공식 (예: "hours * rate * 1.1")
+  description String?  @db.Text
+  variables   String[] // 필요한 변수 목록 (예: ["hours", "rate"])
+
+  isActive  Boolean  @default(true)
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  // Relations
+  budgetItems BudgetItem[]
+
+  @@index([category])
+  @@map("budget_formulas")
+}
+
+model ProjectVariable {
+  id          String  @id @default(uuid())
+  projectId   String
+  name        String // 변수 이름 (예: "hours", "rate")
+  value       Decimal @db.Decimal(20, 4) // 변수 값
+  unit        String? // 단위 (예: "시간", "원")
+  description String? @db.Text
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@unique([projectId, name])
+  @@index([projectId])
+  @@map("project_variables")
+}
+
+model CalculationHistory {
+  id           String @id @default(uuid())
+  budgetItemId String
+
+  formulaUsed String  @db.Text // 사용된 공식
+  variables   Json // 계산에 사용된 변수값
+  result      Decimal @db.Decimal(20, 2) // 계산 결과
+
+  calculatedAt DateTime @default(now())
+  calculatedBy String? // User ID
+
+  // Relations
+  budgetItem BudgetItem @relation(fields: [budgetItemId], references: [id], onDelete: Cascade)
+
+  @@index([budgetItemId])
+  @@index([calculatedAt])
+  @@map("calculation_history")
+}
+
+model BudgetTemplate {
+  id          String  @id @default(uuid())
+  name        String
+  description String? @db.Text
+  structure   Json // 예산 구조 (BudgetItem 배열)
+
+  createdBy String
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@map("budget_templates")
 }
 
 // ============================================
@@ -188,39 +383,39 @@ model BudgetItem {
 // ============================================
 
 model ExecutionRequest {
-  id                String            @id @default(uuid())
-  requestNumber     String            @unique // 품의번호 (예: EXE-2024-001)
+  id            String @id @default(uuid())
+  requestNumber String @unique // 품의번호 (예: EXE-2024-001)
 
   // Basic Info
-  projectId         String
-  budgetItemId      String
-  requestedById     String
+  projectId     String
+  budgetItemId  String
+  requestedById String
 
   // Amounts
-  amount            Decimal           @db.Decimal(20, 2)
-  executionDate     DateTime          // 집행 예정일
+  amount        Decimal  @db.Decimal(20, 2)
+  executionDate DateTime // 집행 예정일
 
   // Details
-  purpose           String            @db.Text // 집행 사유
-  description       String?           @db.Text
-  attachments       String[]          // File URLs
+  purpose     String   @db.Text // 집행 사유
+  description String?  @db.Text
+  attachments String[] // File URLs
 
   // Status
-  status            ExecutionStatus   @default(DRAFT)
-  currentStep       Int               @default(0) // 현재 결재 단계
-  rejectionReason   String?           @db.Text
+  status          ExecutionStatus @default(DRAFT)
+  currentStep     Int             @default(0) // 현재 결재 단계
+  rejectionReason String?         @db.Text
 
   // Metadata
-  createdAt         DateTime          @default(now())
-  updatedAt         DateTime          @updatedAt
-  completedAt       DateTime?
+  createdAt   DateTime  @default(now())
+  updatedAt   DateTime  @updatedAt
+  completedAt DateTime?
 
   // Relations
-  project           Project           @relation(fields: [projectId], references: [id], onDelete: Cascade)
-  budgetItem        BudgetItem        @relation(fields: [budgetItemId], references: [id])
-  requestedBy       User              @relation("ExecutionRequestor", fields: [requestedById], references: [id])
-  approvals         Approval[]
-  budgetTransfers   BudgetTransfer[]
+  project         Project          @relation(fields: [projectId], references: [id], onDelete: Cascade)
+  budgetItem      BudgetItem       @relation(fields: [budgetItemId], references: [id])
+  requestedBy     User             @relation("ExecutionRequestor", fields: [requestedById], references: [id])
+  approvals       Approval[]
+  budgetTransfers BudgetTransfer[]
 
   @@index([requestNumber])
   @@index([status])
@@ -232,33 +427,33 @@ model ExecutionRequest {
 }
 
 enum ExecutionStatus {
-  DRAFT           // 작성중
-  PENDING         // 승인대기
-  APPROVED        // 승인완료
-  REJECTED        // 반려
-  CANCELLED       // 취소
+  DRAFT // 작성중
+  PENDING // 승인대기
+  APPROVED // 승인완료
+  REJECTED // 반려
+  CANCELLED // 취소
 }
 
 model Approval {
-  id                String            @id @default(uuid())
+  id                 String @id @default(uuid())
   executionRequestId String
 
   // Approval Info
-  step              Int               // 결재 단계 (1: 담당자, 2: 승인권자)
-  approverRole      UserRole          // 승인자 역할 (STAFF, APPROVER)
-  approverId        String?           // Nullable because not assigned yet
+  step         Int // 결재 단계 (1: 담당자, 2: 승인권자)
+  approverRole UserRole // 승인자 역할 (STAFF, APPROVER)
+  approverId   String? // Nullable because not assigned yet
 
   // Status
-  status            ApprovalStatus    @default(PENDING)
-  decision          String?           @db.Text // 승인/반려 의견
-  decidedAt         DateTime?
+  status    ApprovalStatus @default(PENDING)
+  decision  String?        @db.Text // 승인/반려 의견
+  decidedAt DateTime?
 
-  createdAt         DateTime          @default(now())
-  updatedAt         DateTime          @updatedAt
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
 
   // Relations
-  executionRequest  ExecutionRequest  @relation(fields: [executionRequestId], references: [id], onDelete: Cascade)
-  approver          User?             @relation(fields: [approverId], references: [id])
+  executionRequest ExecutionRequest @relation(fields: [executionRequestId], references: [id], onDelete: Cascade)
+  approver         User?            @relation(fields: [approverId], references: [id])
 
   @@unique([executionRequestId, step])
   @@index([status])
@@ -270,10 +465,10 @@ model Approval {
 }
 
 enum ApprovalStatus {
-  PENDING   // 대기중
-  APPROVED  // 승인
-  REJECTED  // 반려
-  SKIPPED   // 생략
+  PENDING // 대기중
+  APPROVED // 승인
+  REJECTED // 반려
+  SKIPPED // 생략
 }
 
 // ============================================
@@ -281,40 +476,40 @@ enum ApprovalStatus {
 // ============================================
 
 model BudgetTransfer {
-  id                String         @id @default(uuid())
+  id String @id @default(uuid())
 
   // 전용 정보
-  sourceItemId      String         // 출처 예산 항목
-  targetItemId      String         // 대상 예산 항목
-  amount            Decimal        @db.Decimal(20, 2) // 전용 금액
-  transferType      TransferType   // 일부/전체 전용
+  sourceItemId String // 출처 예산 항목
+  targetItemId String // 대상 예산 항목
+  amount       Decimal      @db.Decimal(20, 2) // 전용 금액
+  transferType TransferType // 일부/전체 전용
 
   // 사유 및 상세
-  reason            String         @db.Text // 전용 사유
-  description       String?        @db.Text
+  reason      String  @db.Text // 전용 사유
+  description String? @db.Text
 
   // 상태 및 승인
-  status            TransferStatus @default(PENDING)
+  status TransferStatus @default(PENDING)
 
   // 집행 요청 연결 (이 전용으로 인해 발생한 집행 요청)
   executionRequestId String?
 
   // 승인 정보
-  approvedById      String?
-  approvedAt        DateTime?
-  rejectionReason   String?        @db.Text
+  approvedById    String?
+  approvedAt      DateTime?
+  rejectionReason String?   @db.Text
 
   // Metadata
-  createdById       String
-  createdAt         DateTime       @default(now())
-  updatedAt         DateTime       @updatedAt
+  createdById String
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
 
   // Relations
-  sourceItem        BudgetItem     @relation("TransferSource", fields: [sourceItemId], references: [id])
-  targetItem        BudgetItem     @relation("TransferTarget", fields: [targetItemId], references: [id])
-  executionRequest  ExecutionRequest? @relation(fields: [executionRequestId], references: [id])
-  createdBy         User           @relation("TransferCreator", fields: [createdById], references: [id])
-  approvedBy        User?          @relation("TransferApprover", fields: [approvedById], references: [id])
+  sourceItem       BudgetItem        @relation("TransferSource", fields: [sourceItemId], references: [id])
+  targetItem       BudgetItem        @relation("TransferTarget", fields: [targetItemId], references: [id])
+  executionRequest ExecutionRequest? @relation(fields: [executionRequestId], references: [id])
+  createdBy        User              @relation("TransferCreator", fields: [createdById], references: [id])
+  approvedBy       User?             @relation("TransferApprover", fields: [approvedById], references: [id])
 
   @@index([sourceItemId])
   @@index([targetItemId])
@@ -325,14 +520,14 @@ model BudgetTransfer {
 }
 
 enum TransferType {
-  PARTIAL  // 일부 전용
-  FULL     // 전체 전용
+  PARTIAL // 일부 전용
+  FULL // 전체 전용
 }
 
 enum TransferStatus {
-  PENDING   // 대기중
-  APPROVED  // 승인됨
-  REJECTED  // 거부됨
+  PENDING // 대기중
+  APPROVED // 승인됨
+  REJECTED // 거부됨
 }
 
 // ============================================
@@ -340,40 +535,57 @@ enum TransferStatus {
 // ============================================
 
 model CashFlowItem {
-  id          String        @id @default(uuid())
-  projectId   String
+  id           String  @id @default(uuid())
+  projectId    String
+  budgetItemId String? // Link to budget item
 
   // Classification
-  type        CashFlowType  // INFLOW or OUTFLOW
-  category    String        // 수입: 분양수입, 지출: 토지비 등
+  type        CashFlowType // INFLOW or OUTFLOW
+  category    String // 수입: 분양수입, 지출: 토지비 등
+  mainItem    String // 항목
+  subItem     String? // 소항목
   description String?
 
   // Amounts
-  plannedAmount   Decimal   @db.Decimal(20, 2) // 계획액
-  actualAmount    Decimal   @db.Decimal(20, 2) @default(0) // 실제액
+  budgetAmount   Decimal @db.Decimal(20, 2) // 예산액
+  forecastAmount Decimal @db.Decimal(20, 2) // 전망액 (예측)
+  actualAmount   Decimal @default(0) @db.Decimal(20, 2) // 실제액 (기집행)
+
+  // NEW: Budget vs Forecast Variance
+  varianceAmount     Decimal @default(0) @db.Decimal(20, 2) // 예산-전망 차이
+  varianceReason     String? @db.Text // 차이 사유
+  isVarianceApproved Boolean @default(false) // 차이 승인 여부
+
+  // NEW: Actual vs Nominal Execution
+  actualExecutionType    String  @default("ACTUAL") // ACTUAL, NOMINAL, SPLIT
+  actualExecutionAmount  Decimal @default(0) @db.Decimal(20, 2) // 실집행액
+  nominalExecutionAmount Decimal @default(0) @db.Decimal(20, 2) // 명목집행액
+  executionNote          String? @db.Text // 집행 구분 사유
 
   // Dates
-  plannedDate     DateTime  // 계획일
-  actualDate      DateTime? // 실제 발생일
+  plannedDate  DateTime // 계획일
+  forecastDate DateTime? // 전망일
+  actualDate   DateTime? // 실제 발생일
 
   // Metadata
-  isRecurring     Boolean   @default(false) // 반복 여부
-  recurringMonths Int?      // 반복 개월수
-  createdAt       DateTime  @default(now())
-  updatedAt       DateTime  @updatedAt
+  isRecurring     Boolean  @default(false) // 반복 여부
+  recurringMonths Int? // 반복 개월수
+  createdAt       DateTime @default(now())
+  updatedAt       DateTime @updatedAt
 
   // Relations
-  project     Project   @relation(fields: [projectId], references: [id], onDelete: Cascade)
+  project Project @relation(fields: [projectId], references: [id], onDelete: Cascade)
 
   @@index([projectId])
+  @@index([budgetItemId])
   @@index([plannedDate])
   @@index([type])
   @@map("cash_flow_items")
 }
 
 enum CashFlowType {
-  INFLOW   // 수입
-  OUTFLOW  // 지출
+  INFLOW // 수입
+  OUTFLOW // 지출
 }
 
 // ============================================
@@ -381,35 +593,35 @@ enum CashFlowType {
 // ============================================
 
 model FinancialModel {
-  id          String   @id @default(uuid())
-  projectId   String
+  id        String @id @default(uuid())
+  projectId String
 
   // Model Version
-  version     Int      // 버전 번호 (집행 시마다 증가)
-  isActive    Boolean  @default(true) // 현재 활성 모델
+  version  Int // 버전 번호 (집행 시마다 증가)
+  isActive Boolean @default(true) // 현재 활성 모델
 
   // Assumptions
-  salesRate           Float    // 분양률 (%)
-  salesStartMonth     Int      // 분양 시작 개월
-  constructionDelay   Int      @default(0) // 공사 지연 개월
-  costInflation       Float    @default(0) // 공사비 인상률 (%)
-  interestRate        Float    // 금리 (%)
+  salesRate         Float // 분양률 (%)
+  salesStartMonth   Int // 분양 시작 개월
+  constructionDelay Int   @default(0) // 공사 지연 개월
+  costInflation     Float @default(0) // 공사비 인상률 (%)
+  interestRate      Float // 금리 (%)
 
   // Calculated Results (JSON 저장)
-  monthlyProjections  Json     // 월별 예상 현금흐름
-  totalRevenue        Decimal  @db.Decimal(20, 2)
-  totalCost           Decimal  @db.Decimal(20, 2)
-  expectedProfit      Decimal  @db.Decimal(20, 2)
-  roi                 Float
-  lowestCashPoint     Decimal  @db.Decimal(20, 2) // 최저 현금 시점
-  lowestCashMonth     Int      // 최저 현금 발생 월
+  monthlyProjections Json // 월별 예상 현금흐름
+  totalRevenue       Decimal @db.Decimal(20, 2)
+  totalCost          Decimal @db.Decimal(20, 2)
+  expectedProfit     Decimal @db.Decimal(20, 2)
+  roi                Float
+  lowestCashPoint    Decimal @db.Decimal(20, 2) // 최저 현금 시점
+  lowestCashMonth    Int // 최저 현금 발생 월
 
   // Metadata
   calculatedAt DateTime @default(now())
   calculatedBy String? // User ID who triggered calculation
 
   // Relations
-  project     Project  @relation(fields: [projectId], references: [id], onDelete: Cascade)
+  project Project @relation(fields: [projectId], references: [id], onDelete: Cascade)
 
   @@index([projectId])
   @@index([version])
@@ -418,29 +630,29 @@ model FinancialModel {
 }
 
 model Simulation {
-  id          String   @id @default(uuid())
-  projectId   String
-  name        String   // 시나리오 이름
+  id        String @id @default(uuid())
+  projectId String
+  name      String // 시나리오 이름
 
   // Scenario Parameters
-  salesDelay      Int      @default(0) // 분양 지연 (개월)
-  salesRate       Float    // 분양률 (%)
-  costChange      Float    @default(0) // 공사비 변동 (%)
-  interestChange  Float    @default(0) // 금리 변동 (%p)
+  salesDelay     Int   @default(0) // 분양 지연 (개월)
+  salesRate      Float // 분양률 (%)
+  costChange     Float @default(0) // 공사비 변동 (%)
+  interestChange Float @default(0) // 금리 변동 (%p)
 
   // Results
-  projectedProfit Decimal  @db.Decimal(20, 2)
+  projectedProfit Decimal @db.Decimal(20, 2)
   projectedROI    Float
-  lowestCash      Decimal  @db.Decimal(20, 2)
+  lowestCash      Decimal @db.Decimal(20, 2)
   lowestCashMonth Int
-  recommendations Json     // AI 추천사항
+  recommendations Json // AI 추천사항
 
   // Metadata
-  createdAt   DateTime @default(now())
-  createdBy   String?
+  createdAt DateTime @default(now())
+  createdBy String?
 
   // Relations
-  project     Project  @relation(fields: [projectId], references: [id], onDelete: Cascade)
+  project Project @relation(fields: [projectId], references: [id], onDelete: Cascade)
 
   @@index([projectId])
   @@map("simulations")
@@ -451,25 +663,25 @@ model Simulation {
 // ============================================
 
 model Notification {
-  id          String           @id @default(uuid())
-  userId      String
-  projectId   String?
+  id        String  @id @default(uuid())
+  userId    String
+  projectId String?
 
-  type        NotificationType
-  title       String
-  message     String           @db.Text
-  severity    NotificationSeverity @default(INFO)
+  type     NotificationType
+  title    String
+  message  String               @db.Text
+  severity NotificationSeverity @default(INFO)
 
-  isRead      Boolean          @default(false)
-  readAt      DateTime?
+  isRead Boolean   @default(false)
+  readAt DateTime?
 
   // Metadata
-  metadata    Json?            // Additional data
-  createdAt   DateTime         @default(now())
+  metadata  Json? // Additional data
+  createdAt DateTime @default(now())
 
   // Relations
-  user        User             @relation(fields: [userId], references: [id], onDelete: Cascade)
-  project     Project?         @relation(fields: [projectId], references: [id], onDelete: Cascade)
+  user    User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  project Project? @relation(fields: [projectId], references: [id], onDelete: Cascade)
 
   @@index([userId, isRead])
   @@index([createdAt])
@@ -478,41 +690,41 @@ model Notification {
 }
 
 enum NotificationType {
-  EXECUTION_RATE_WARNING  // 집행률 경고
-  APPROVAL_REQUEST        // 결재 요청
-  APPROVAL_COMPLETED      // 결재 완료
-  APPROVAL_REJECTED       // 결재 반려
-  BUDGET_CHANGE           // 예산 변경
-  RISK_ALERT              // 리스크 알림
-  SYSTEM                  // 시스템 알림
+  EXECUTION_RATE_WARNING // 집행률 경고
+  APPROVAL_REQUEST // 결재 요청
+  APPROVAL_COMPLETED // 결재 완료
+  APPROVAL_REJECTED // 결재 반려
+  BUDGET_CHANGE // 예산 변경
+  RISK_ALERT // 리스크 알림
+  SYSTEM // 시스템 알림
 }
 
 enum NotificationSeverity {
-  INFO     // 정보
-  WARNING  // 주의
-  DANGER   // 위험
+  INFO // 정보
+  WARNING // 주의
+  DANGER // 위험
   CRITICAL // 긴급
 }
 
 model ActivityLog {
-  id          String   @id @default(uuid())
-  userId      String
-  projectId   String?
+  id        String  @id @default(uuid())
+  userId    String
+  projectId String?
 
-  action      String   // 액션 종류
-  entity      String   // 대상 엔티티
-  entityId    String   // 대상 ID
-  description String   @db.Text
-  metadata    Json?    // 상세 데이터
+  action      String // 액션 종류
+  entity      String // 대상 엔티티
+  entityId    String // 대상 ID
+  description String @db.Text
+  metadata    Json? // 상세 데이터
 
-  ipAddress   String?
-  userAgent   String?
+  ipAddress String?
+  userAgent String?
 
-  createdAt   DateTime @default(now())
+  createdAt DateTime @default(now())
 
   // Relations
-  user        User     @relation(fields: [userId], references: [id], onDelete: Cascade)
-  project     Project? @relation(fields: [projectId], references: [id], onDelete: Cascade)
+  user    User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  project Project? @relation(fields: [projectId], references: [id], onDelete: Cascade)
 
   @@index([userId])
   @@index([projectId])

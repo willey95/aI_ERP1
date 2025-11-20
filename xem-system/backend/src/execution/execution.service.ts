@@ -1,5 +1,6 @@
 import { Injectable, NotFoundException, BadRequestException } from '@nestjs/common';
 import { PrismaService } from '../prisma/prisma.service';
+import { UserRole } from '@prisma/client';
 import { Decimal } from '@prisma/client/runtime/library';
 
 @Injectable()
@@ -93,12 +94,20 @@ export class ExecutionService {
     }
 
     const requestAmount = new Decimal(amount);
-    if (requestAmount.greaterThan(budgetItem.remainingBudget)) {
+    if (requestAmount.greaterThan(budgetItem.remainingBeforeExec)) {
       throw new BadRequestException('Insufficient budget balance');
     }
 
     // Generate request number
     const requestNumber = await this.generateRequestNumber();
+
+    // Update pending execution amount in budget item
+    await this.prisma.budgetItem.update({
+      where: { id: budgetItemId },
+      data: {
+        pendingExecutionAmount: budgetItem.pendingExecutionAmount.plus(requestAmount),
+      },
+    });
 
     // Create execution request
     const execution = await this.prisma.executionRequest.create({
@@ -117,10 +126,12 @@ export class ExecutionService {
       },
     });
 
-    // Create approval workflow (2 steps: 담당자 → 승인권자)
+    // Create approval workflow (4 steps: 팀장 → CFO → RM → 관리자)
     const approvalSteps = [
-      { step: 1, approverRole: 'STAFF' },      // 담당자 제출 (자동 승인)
-      { step: 2, approverRole: 'APPROVER' },   // 승인권자 승인
+      { step: 1, approverRole: UserRole.TEAM_LEAD },  // 팀장 승인
+      { step: 2, approverRole: UserRole.CFO },        // CFO 승인
+      { step: 3, approverRole: UserRole.RM_TEAM },    // RM팀 승인
+      { step: 4, approverRole: UserRole.ADMIN },      // 관리자 최종 승인
     ];
 
     for (const approval of approvalSteps) {
@@ -129,20 +140,15 @@ export class ExecutionService {
           executionRequestId: execution.id,
           step: approval.step,
           approverRole: approval.approverRole,
-          status: approval.step === 1 ? 'APPROVED' : 'PENDING', // STAFF step auto-approved
-          approverId: approval.step === 1 ? userId : null,      // STAFF auto-assigned
-          decidedAt: approval.step === 1 ? new Date() : null,
+          status: 'PENDING',
+          approverId: null,
+          decidedAt: null,
         },
       });
     }
 
-    // Auto-advance to step 2 (APPROVER)
-    await this.prisma.executionRequest.update({
-      where: { id: execution.id },
-      data: {
-        currentStep: 2,
-      },
-    });
+    // Execution remains at step 1 for TEAM_LEAD approval
+    // No auto-advance needed
 
     return execution;
   }
@@ -170,6 +176,14 @@ export class ExecutionService {
       throw new BadRequestException('Can only cancel pending requests');
     }
 
+    // Decrease pending execution amount in budget item
+    await this.prisma.budgetItem.update({
+      where: { id: execution.budgetItemId },
+      data: {
+        pendingExecutionAmount: execution.budgetItem.pendingExecutionAmount.minus(execution.amount),
+      },
+    });
+
     return this.prisma.executionRequest.update({
       where: { id },
       data: {
@@ -192,3 +206,4 @@ export class ExecutionService {
     return `EXE-${year}-${String(count + 1).padStart(4, '0')}`;
   }
 }
+

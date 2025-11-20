@@ -14,7 +14,7 @@ interface AuthState {
 
 export const useAuthStore = create<AuthState>()(
   persist(
-    (set) => ({
+    (set, get) => ({
       user: null,
       token: null,
       isAuthenticated: false,
@@ -28,6 +28,9 @@ export const useAuthStore = create<AuthState>()(
 
           const { user, token } = response.data;
 
+          // Store token in localStorage for API interceptor
+          localStorage.setItem('xem_token', token);
+
           // Zustand persist middleware handles localStorage automatically
           set({
             user,
@@ -40,6 +43,9 @@ export const useAuthStore = create<AuthState>()(
       },
 
       logout: () => {
+        // Remove token from localStorage
+        localStorage.removeItem('xem_token');
+
         // Zustand persist middleware handles localStorage cleanup automatically
         set({
           user: null,
@@ -64,6 +70,12 @@ export const useAuthStore = create<AuthState>()(
     }),
     {
       name: 'xem-auth',
+      onRehydrateStorage: () => (state) => {
+        // When zustand restores state from localStorage, also set token in localStorage
+        if (state?.token) {
+          localStorage.setItem('xem_token', state.token);
+        }
+      },
     }
   )
 );
