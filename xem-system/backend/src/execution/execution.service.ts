@@ -94,7 +94,7 @@ export class ExecutionService {
     }
 
     const requestAmount = new Decimal(amount);
-    if (requestAmount.greaterThan(budgetItem.remainingBudget)) {
+    if (requestAmount.greaterThan(budgetItem.remainingBeforeExec)) {
       throw new BadRequestException('Insufficient budget balance');
     }
 
@@ -120,10 +120,10 @@ export class ExecutionService {
 
     // Create approval workflow (4 steps: 팀장 → CFO → RM → 관리자)
     const approvalSteps = [
-      { step: 1, approverRole: 'TEAM_LEAD' },  // 팀장 승인
-      { step: 2, approverRole: 'CFO' },        // CFO 승인
-      { step: 3, approverRole: 'RM' },         // RM팀 승인
-      { step: 4, approverRole: 'ADMIN' },      // 관리자 최종 승인
+      { step: 1, approverRole: UserRole.TEAM_LEAD },  // 팀장 승인
+      { step: 2, approverRole: UserRole.CFO },        // CFO 승인
+      { step: 3, approverRole: UserRole.RM_TEAM },    // RM팀 승인
+      { step: 4, approverRole: UserRole.ADMIN },      // 관리자 최종 승인
     ];
 
     for (const approval of approvalSteps) {

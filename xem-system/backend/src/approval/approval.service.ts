@@ -40,7 +40,9 @@ export class ApprovalService {
               select: {
                 mainItem: true,
                 subItem: true,
-                remainingBudget: true,
+                remainingBeforeExec: true,
+                remainingAfterExec: true,
+                pendingExecutionAmount: true,
               },
             },
             requestedBy: {
@@ -114,9 +116,9 @@ export class ApprovalService {
         const budgetItem = executionRequest.budgetItem;
         const requestAmount = executionRequest.amount;
 
-        if (requestAmount.greaterThan(budgetItem.remainingBudget)) {
+        if (requestAmount.greaterThan(budgetItem.remainingBeforeExec)) {
           throw new BadRequestException(
-            `Insufficient budget. Requested: ${requestAmount}, Available: ${budgetItem.remainingBudget}`
+            `Insufficient budget. Requested: ${requestAmount}, Available: ${budgetItem.remainingBeforeExec}`
           );
         }
       }
@@ -145,7 +147,9 @@ export class ApprovalService {
         // Update budget item
         const budgetItem = executionRequest.budgetItem;
         const newExecuted = budgetItem.executedAmount.plus(executionRequest.amount);
-        const newRemaining = budgetItem.currentBudget.minus(newExecuted);
+        const newRemainingBeforeExec = budgetItem.currentBudget.minus(newExecuted);
+        const newPendingAmount = budgetItem.pendingExecutionAmount.minus(executionRequest.amount);
+        const newRemainingAfterExec = newRemainingBeforeExec.minus(newPendingAmount);
         const newRate = budgetItem.currentBudget.isZero()
           ? 0
           : newExecuted.dividedBy(budgetItem.currentBudget).times(100).toNumber();
@@ -154,7 +158,9 @@ export class ApprovalService {
           where: { id: budgetItem.id },
           data: {
             executedAmount: newExecuted,
-            remainingBudget: newRemaining,
+            remainingBeforeExec: newRemainingBeforeExec,
+            remainingAfterExec: newRemainingAfterExec,
+            pendingExecutionAmount: newPendingAmount.greaterThanOrEqualTo(0) ? newPendingAmount : new Decimal(0),
             executionRate: newRate,
           },
         });

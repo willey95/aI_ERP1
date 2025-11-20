@@ -369,39 +369,39 @@ export default function FinancialModelPage() {
         {displayData && (
           <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-5 gap-4">
             <div className="bg-white rounded-xl border border-stone-200 p-6 shadow-sm">
-              <div className="text-sm text-stone-600 mb-1">총 수익</div>
-              <div className="text-2xl font-bold text-stone-900 font-mono">
+              <div className="text-xs text-stone-600 mb-1">총 수익</div>
+              <div className="text-xl font-bold text-stone-900 font-mono">
                 {formatCurrency(displayData.totalRevenue || displayData.summary?.totalRevenue)}
               </div>
             </div>
 
             <div className="bg-white rounded-xl border border-stone-200 p-6 shadow-sm">
-              <div className="text-sm text-stone-600 mb-1">총 비용</div>
-              <div className="text-2xl font-bold text-stone-900 font-mono">
+              <div className="text-xs text-stone-600 mb-1">총 비용</div>
+              <div className="text-xl font-bold text-stone-900 font-mono">
                 {formatCurrency(displayData.totalCost || displayData.summary?.totalCost)}
               </div>
             </div>
 
             <div className="bg-white rounded-xl border border-stone-200 p-6 shadow-sm">
-              <div className="text-sm text-stone-600 mb-1">예상 이익</div>
-              <div className="text-2xl font-bold text-stone-900 font-mono">
+              <div className="text-xs text-stone-600 mb-1">예상 이익</div>
+              <div className="text-xl font-bold text-stone-900 font-mono">
                 {formatCurrency(displayData.expectedProfit || displayData.summary?.expectedProfit)}
               </div>
             </div>
 
             <div className="bg-white rounded-xl border border-stone-200 p-6 shadow-sm">
-              <div className="text-sm text-stone-600 mb-1">ROI</div>
-              <div className="text-2xl font-bold text-stone-900 font-mono">
+              <div className="text-xs text-stone-600 mb-1">ROI</div>
+              <div className="text-xl font-bold text-stone-900 font-mono">
                 {((displayData.roi || displayData.summary?.roi) ?? 0).toFixed(2)}%
               </div>
             </div>
 
             <div className="bg-white rounded-xl border border-stone-200 p-6 shadow-sm">
-              <div className="text-sm text-stone-600 mb-1">최저 현금</div>
-              <div className="text-2xl font-bold text-stone-900 font-mono">
+              <div className="text-xs text-stone-600 mb-1">최저 현금</div>
+              <div className="text-xl font-bold text-stone-900 font-mono">
                 {formatCurrency(displayData.lowestCashPoint || displayData.summary?.lowestCashPoint)}
               </div>
-              <div className="text-xs text-stone-500 mt-1">
+              <div className="text-[10px] text-stone-500 mt-1">
                 {displayData.lowestCashMonth || displayData.summary?.lowestCashMonth}개월차
               </div>
             </div>

@@ -4,11 +4,12 @@
 
 @layer base {
   :root {
-    --background: 0 0% 100%;
-    --foreground: 222.2 84% 4.9%;
-    --border: 214.3 31.8% 91.4%;
-    --input: 214.3 31.8% 91.4%;
-    --ring: 222.2 84% 4.9%;
+    /* E-ink inspired B&W theme */
+    --background: 0 0% 98%; /* Off-white paper */
+    --foreground: 0 0% 0%;  /* Pure black ink */
+    --border: 0 0% 85%;     /* Light gray borders */
+    --input: 0 0% 95%;      /* Very light gray inputs */
+    --ring: 0 0% 20%;       /* Dark gray focus ring */
   }
 
   * {
@@ -18,6 +19,10 @@
   body {
     @apply bg-background text-foreground;
     font-feature-settings: "rlig" 1, "calt" 1;
+    /* E-ink display properties */
+    -webkit-font-smoothing: antialiased;
+    -moz-osx-font-smoothing: grayscale;
+    text-rendering: optimizeLegibility;
   }
 }
 

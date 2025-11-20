@@ -41,6 +41,7 @@ export default function Layout({ children }: LayoutProps) {
       subItems: [
         { path: '/executions', label: '요청' },
         { path: '/executions/history', label: '히스토리 & CF' },
+        { path: '/cashflow', label: 'CF 테이블' },
       ],
     },
     { path: '/approvals', label: '승인' },
@@ -48,32 +49,32 @@ export default function Layout({ children }: LayoutProps) {
   ];
 
   return (
-    <div className="min-h-screen bg-gradient-to-br from-slate-50 via-white to-slate-50">
-      {/* Sidebar */}
-      <div className="fixed inset-y-0 left-0 w-72 bg-gradient-to-b from-slate-950 via-slate-900 to-slate-950 backdrop-blur-xl border-r border-slate-800/50">
+    <div className="min-h-screen bg-ink-0">
+      {/* Sidebar - E-ink style */}
+      <div className="fixed inset-y-0 left-0 w-72 bg-ink-9 border-r-2 border-ink-7 z-20">
         {/* Logo */}
-        <div className="flex items-center h-20 px-8 border-b border-slate-800/50">
+        <div className="flex items-center h-20 px-8 border-b-2 border-ink-7 bg-ink-9">
           <div className="flex flex-col">
-            <h1 className="text-3xl font-black tracking-tight text-white">
+            <h1 className="text-3xl font-black tracking-tight text-ink-0">
               XEM
             </h1>
-            <span className="text-[10px] font-semibold tracking-[0.2em] text-slate-400 uppercase mt-0.5">
+            <span className="text-[10px] font-semibold tracking-[0.2em] text-ink-4 uppercase mt-0.5">
               예산집행관리
             </span>
           </div>
         </div>
 
         {/* User Info */}
-        <div className="px-6 py-6 border-b border-slate-800/50">
+        <div className="px-6 py-6 border-b-2 border-ink-7 bg-ink-9">
           <div className="flex items-center space-x-3">
-            <div className="w-10 h-10 rounded-full bg-gradient-to-br from-blue-500 to-purple-600 flex items-center justify-center">
-              <span className="text-sm font-bold text-white">
+            <div className="w-10 h-10 rounded-full bg-ink-8 border-2 border-ink-6 flex items-center justify-center">
+              <span className="text-sm font-bold text-ink-0">
                 {user?.name?.charAt(0) || 'U'}
               </span>
             </div>
             <div className="flex-1 min-w-0">
-              <div className="text-sm font-semibold text-white truncate">{user?.name}</div>
-              <div className="text-xs font-medium text-slate-400 truncate">{user?.role}</div>
+              <div className="text-sm font-semibold text-ink-0 truncate">{user?.name}</div>
+              <div className="text-xs font-medium text-ink-4 truncate">{user?.role}</div>
             </div>
           </div>
         </div>
@@ -97,27 +98,27 @@ export default function Layout({ children }: LayoutProps) {
                 <div key={index} className="space-y-1">
                   <button
                     onClick={toggleMenu}
-                    className={`w-full group flex items-center justify-between px-4 py-3 text-sm font-bold tracking-wide rounded-lg transition-all duration-200 ${
+                    className={`w-full group flex items-center justify-between px-4 py-3 text-sm font-bold tracking-wide transition-all duration-200 ${
                       anySubActive
-                        ? 'bg-gradient-to-r from-blue-600 to-purple-600 text-white shadow-lg shadow-blue-500/20'
-                        : 'text-slate-300 hover:text-white hover:bg-slate-800/50'
+                        ? 'bg-ink-7 text-ink-0 border-2 border-ink-5'
+                        : 'text-ink-3 hover:text-ink-0 hover:bg-ink-8 border-2 border-transparent'
                     }`}
                   >
                     <span className="uppercase text-xs tracking-wider font-black">{item.label}</span>
                     <span className={`text-[10px] transition-transform duration-200 ${isMenuOpen ? 'rotate-180' : ''}`}>▼</span>
                   </button>
                   {isMenuOpen && (
-                    <div className="ml-3 mt-1.5 space-y-0.5 pl-3 border-l-2 border-slate-800">
+                    <div className="ml-3 mt-1.5 space-y-0.5 pl-3 border-l-2 border-ink-7">
                       {item.subItems.map((subItem) => {
                         const isActive = location.pathname === subItem.path;
                         return (
                           <Link
                             key={subItem.path}
                             to={subItem.path}
-                            className={`block px-4 py-2.5 text-xs font-semibold tracking-wide rounded-md transition-all duration-200 ${
+                            className={`block px-4 py-2.5 text-xs font-semibold tracking-wide transition-all duration-200 ${
                               isActive
-                                ? 'bg-slate-800/80 text-blue-400 border-l-2 border-blue-400 -ml-[14px] pl-[18px]'
-                                : 'text-slate-400 hover:text-white hover:bg-slate-800/40'
+                                ? 'bg-ink-8 text-ink-0 border-l-2 border-ink-4 -ml-[14px] pl-[18px]'
+                                : 'text-ink-4 hover:text-ink-0 hover:bg-ink-8'
                             }`}
                           >
                             {subItem.label}
@@ -135,10 +136,10 @@ export default function Layout({ children }: LayoutProps) {
                 <Link
                   key={item.path}
                   to={item.path!}
-                  className={`group flex items-center px-4 py-3 text-xs font-black tracking-wider rounded-lg transition-all duration-200 uppercase ${
+                  className={`group flex items-center px-4 py-3 text-xs font-black tracking-wider transition-all duration-200 uppercase ${
                     isActive
-                      ? 'bg-gradient-to-r from-blue-600 to-purple-600 text-white shadow-lg shadow-blue-500/20'
-                      : 'text-slate-300 hover:text-white hover:bg-slate-800/50'
+                      ? 'bg-ink-7 text-ink-0 border-2 border-ink-5'
+                      : 'text-ink-3 hover:text-ink-0 hover:bg-ink-8 border-2 border-transparent'
                   }`}
                 >
                   {item.label}
@@ -149,10 +150,10 @@ export default function Layout({ children }: LayoutProps) {
         </nav>
 
         {/* Logout Button */}
-        <div className="absolute bottom-0 left-0 right-0 p-4 border-t border-slate-800/50 bg-slate-950/50 backdrop-blur-sm">
+        <div className="absolute bottom-0 left-0 right-0 p-4 border-t-2 border-ink-7 bg-ink-9 z-10">
           <button
             onClick={handleLogout}
-            className="w-full px-4 py-3 text-xs font-black tracking-wider text-slate-300 hover:text-white bg-slate-800/50 hover:bg-red-900/30 border border-slate-700/50 hover:border-red-700/50 rounded-lg transition-all duration-200 uppercase"
+            className="w-full px-4 py-3 text-xs font-black tracking-wider text-ink-3 hover:text-ink-0 bg-ink-8 hover:bg-ink-7 border-2 border-ink-7 hover:border-ink-5 transition-all duration-200 uppercase"
           >
             로그아웃
           </button>
@@ -161,23 +162,23 @@ export default function Layout({ children }: LayoutProps) {
 
       {/* Main Content */}
       <div className="ml-72">
-        {/* Header - Minimalist */}
-        <header className="sticky top-0 z-10 bg-white/80 backdrop-blur-xl border-b border-slate-200/50 shadow-sm">
+        {/* Header - E-ink style */}
+        <header className="sticky top-0 z-10 bg-ink-0 border-b-2 border-ink-3">
           <div className="px-8 py-5">
             <div className="flex items-center justify-between">
               <div>
-                <h2 className="text-2xl font-black tracking-tight text-slate-900">
+                <h2 className="text-2xl font-black tracking-tight text-ink-9">
                   {navItems.find((item) => item.path === location.pathname)?.label ||
                    navItems.find(item => 'subItems' in item && item.subItems.some(sub => sub.path === location.pathname))?.subItems.find(sub => sub.path === location.pathname)?.label ||
                    'XEM'}
                 </h2>
-                <p className="text-xs font-semibold text-slate-500 mt-0.5 tracking-wide">
+                <p className="text-xs font-semibold text-ink-6 mt-0.5 tracking-wide">
                   {new Date().toLocaleDateString('en-US', { weekday: 'long', year: 'numeric', month: 'long', day: 'numeric' })}
                 </p>
               </div>
               <div className="flex items-center space-x-2">
-                <div className="px-3 py-1.5 bg-gradient-to-r from-blue-50 to-purple-50 border border-blue-200/50 rounded-full">
-                  <span className="text-xs font-bold text-blue-700 tracking-wide">{user?.role}</span>
+                <div className="px-3 py-1.5 bg-ink-2 border-2 border-ink-4">
+                  <span className="text-xs font-bold text-ink-9 tracking-wide">{user?.role}</span>
                 </div>
               </div>
             </div>

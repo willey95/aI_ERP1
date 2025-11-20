@@ -353,13 +353,14 @@ export default function BudgetManagementPage() {
         <div className="eink-card-body">
           <div className="grid grid-cols-1 md:grid-cols-2 gap-4 items-end">
             <div>
-              <label className="eink-label">프로젝트 선택</label>
+              <label className="block text-sm font-semibold text-ink-7 mb-2">프로젝트 선택</label>
               <select
                 value={selectedProjectId}
                 onChange={(e) => setSelectedProjectId(e.target.value)}
-                className="eink-input eink-select"
+                className="w-96 px-4 py-2.5 text-sm border-2 border-ink-4 rounded-lg focus:outline-none focus:ring-2 focus:ring-ink-7 bg-ink-0"
+                style={{ minHeight: '42px' }}
               >
-                <option value="">프로젝트를 선택하세요</option>
+                <option value="">-- 프로젝트를 선택하세요 --</option>
                 {projects.map((project) => (
                   <option key={project.id} value={project.id}>
                     {project.code} - {project.name}

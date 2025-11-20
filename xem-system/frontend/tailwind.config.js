@@ -13,29 +13,43 @@ export default {
         ring: "hsl(var(--ring))",
         background: "hsl(var(--background))",
         foreground: "hsl(var(--foreground))",
+        // E-ink inspired B&W color palette
         primary: {
-          DEFAULT: "#2563EB",
+          DEFAULT: "#000000", // Pure black
           foreground: "#FFFFFF",
         },
         secondary: {
-          DEFAULT: "#6B7280",
+          DEFAULT: "#4A4A4A", // Dark gray
           foreground: "#FFFFFF",
         },
         success: {
-          DEFAULT: "#10B981",
+          DEFAULT: "#1A1A1A", // Near black
           foreground: "#FFFFFF",
         },
         warning: {
-          DEFAULT: "#F59E0B",
+          DEFAULT: "#666666", // Medium gray
           foreground: "#FFFFFF",
         },
         danger: {
-          DEFAULT: "#EF4444",
+          DEFAULT: "#2D2D2D", // Charcoal
           foreground: "#FFFFFF",
         },
         muted: {
-          DEFAULT: "#F3F4F6",
-          foreground: "#6B7280",
+          DEFAULT: "#F5F5F5", // Off-white
+          foreground: "#404040",
+        },
+        // E-ink grayscale levels
+        ink: {
+          0: "#FFFFFF",  // White (paper)
+          1: "#F0F0F0",  // Lightest gray
+          2: "#E0E0E0",  // Very light gray
+          3: "#D0D0D0",  // Light gray
+          4: "#B0B0B0",  // Medium-light gray
+          5: "#909090",  // Medium gray
+          6: "#707070",  // Medium-dark gray
+          7: "#505050",  // Dark gray
+          8: "#303030",  // Very dark gray
+          9: "#000000",  // Black (ink)
         },
       },
       borderRadius: {

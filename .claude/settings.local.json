@@ -34,7 +34,22 @@
       "Bash(git checkout:*)",
       "Bash(git add:*)",
       "Bash(git commit:*)",
-      "Bash(del nul)"
+      "Bash(del nul)",
+      "Bash(del /F /Q node_modules.cachets-node* 2)",
+      "Bash(del /F /Q \"xem-system\\backend\\nul\" 2)",
+      "Bash(del /F /Q nul 2)",
+      "Bash(net start:*)",
+      "Bash(sc query:*)",
+      "Bash(where:*)",
+      "Bash(START_POSTGRES.bat)",
+      "Bash(psql:*)",
+      "Bash(dir:*)",
+      "Bash(\"C:\\Program Files\\PostgreSQL\\18\\bin\\psql.exe\" --version)",
+      "Bash(\"C:\\Program Files\\PostgreSQL\\18\\bin\\psql.exe\" -U postgres -c \"\\l\")",
+      "Bash(set:*)",
+      "Bash(\"C:\\Program Files\\PostgreSQL\\18\\bin\\psql.exe\" -U postgres -c \"SELECT 1\")",
+      "Bash(\"C:\\Program Files\\PostgreSQL\\18\\bin\\psql.exe\" -U postgres -c \"CREATE DATABASE xem_db;\")",
+      "Bash(cmd /c \"set PGPASSWORD=postgres&& \"\"C:\\Program Files\\PostgreSQL\\18\\bin\\createdb.exe\"\" -U postgres xem_db\")"
     ],
     "deny": [],
     "ask": []

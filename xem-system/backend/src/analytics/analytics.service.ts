@@ -49,7 +49,7 @@ export class AnalyticsService {
       cat.initialBudget = cat.initialBudget.plus(item.initialBudget);
       cat.currentBudget = cat.currentBudget.plus(item.currentBudget);
       cat.executedAmount = cat.executedAmount.plus(item.executedAmount);
-      cat.remainingBudget = cat.remainingBudget.plus(item.remainingBudget);
+      cat.remainingBudget = cat.remainingBudget.plus(item.remainingBeforeExec);
       cat.items.push(item);
     }
 
@@ -89,7 +89,9 @@ export class AnalyticsService {
         initialBudget: item.initialBudget.toNumber(),
         currentBudget: item.currentBudget.toNumber(),
         executedAmount: item.executedAmount.toNumber(),
-        remainingBudget: item.remainingBudget.toNumber(),
+        remainingBeforeExec: item.remainingBeforeExec.toNumber(),
+        remainingAfterExec: item.remainingAfterExec.toNumber(),
+        pendingExecutionAmount: item.pendingExecutionAmount.toNumber(),
         executionRate: item.executionRate,
         displayOrder: item.displayOrder,
       })),
@@ -305,7 +307,7 @@ export class AnalyticsService {
     );
 
     const constructionRemaining = constructionItems.reduce(
-      (sum, item) => sum.plus(item.remainingBudget),
+      (sum, item) => sum.plus(item.remainingBeforeExec),
       new Decimal(0)
     );
 
@@ -322,7 +324,8 @@ export class AnalyticsService {
         mainItem: item.mainItem,
         subItem: item.subItem,
         executionRate: item.executionRate,
-        remainingBudget: item.remainingBudget.toNumber(),
+        remainingBeforeExec: item.remainingBeforeExec.toNumber(),
+        remainingAfterExec: item.remainingAfterExec.toNumber(),
       }));
 
     // 3. 전체 집행률
@@ -377,7 +380,9 @@ export class AnalyticsService {
                 category: true,
                 mainItem: true,
                 subItem: true,
-                remainingBudget: true,
+                remainingBeforeExec: true,
+                remainingAfterExec: true,
+                pendingExecutionAmount: true,
               },
             },
             targetItem: {
@@ -385,7 +390,9 @@ export class AnalyticsService {
                 category: true,
                 mainItem: true,
                 subItem: true,
-                remainingBudget: true,
+                remainingBeforeExec: true,
+                remainingAfterExec: true,
+                pendingExecutionAmount: true,
               },
             },
           },
@@ -413,7 +420,7 @@ export class AnalyticsService {
     }
 
     // 1. 예산 가용성 체크
-    const budgetAvailable = execution.budgetItem.remainingBudget.greaterThanOrEqualTo(execution.amount);
+    const budgetAvailable = execution.budgetItem.remainingBeforeExec.greaterThanOrEqualTo(execution.amount);
 
     // 2. 같은 예산 항목에서의 최근 집행 내역
     const recentExecutions = await this.prisma.executionRequest.findMany({
@@ -436,7 +443,7 @@ export class AnalyticsService {
     });
 
     // 3. 집행 후 예상 잔액
-    const projectedRemaining = execution.budgetItem.remainingBudget.minus(execution.amount);
+    const projectedRemaining = execution.budgetItem.remainingBeforeExec.minus(execution.amount);
     const projectedExecutionRate = execution.budgetItem.currentBudget.equals(0)
       ? 0
       : execution.budgetItem.executedAmount
@@ -464,7 +471,7 @@ export class AnalyticsService {
       );
 
       const totalConstructionRemaining = constructionItems.reduce(
-        (sum, item) => sum.plus(item.remainingBudget),
+        (sum, item) => sum.plus(item.remainingBeforeExec),
         new Decimal(0)
       );
 
@@ -532,7 +539,9 @@ export class AnalyticsService {
         subItem: execution.budgetItem.subItem,
         currentBudget: execution.budgetItem.currentBudget.toNumber(),
         executedAmount: execution.budgetItem.executedAmount.toNumber(),
-        remainingBudget: execution.budgetItem.remainingBudget.toNumber(),
+        remainingBeforeExec: execution.budgetItem.remainingBeforeExec.toNumber(),
+        remainingAfterExec: execution.budgetItem.remainingAfterExec.toNumber(),
+        pendingExecutionAmount: execution.budgetItem.pendingExecutionAmount.toNumber(),
         executionRate: execution.budgetItem.executionRate,
       },
       budgetAvailable,
@@ -590,28 +599,28 @@ export class AnalyticsService {
     const amount = new Decimal(requestAmount);
 
     // 1. 예산 충분 여부
-    const isSufficient = budgetItem.remainingBudget.greaterThanOrEqualTo(amount);
+    const isSufficient = budgetItem.remainingBeforeExec.greaterThanOrEqualTo(amount);
 
     // 2. 부족한 경우 필요한 금액
     const shortage = isSufficient
       ? new Decimal(0)
-      : amount.minus(budgetItem.remainingBudget);
+      : amount.minus(budgetItem.remainingBeforeExec);
 
     // 3. 전용 가능한 예산 항목 찾기 (같은 프로젝트, 같은 category)
     const transferCandidates = budgetItem.project.budgetItems
       .filter((item) => {
         if (item.id === budgetItemId) return false;
         if (item.category !== budgetItem.category) return false;
-        if (item.remainingBudget.lessThanOrEqualTo(0)) return false;
+        if (item.remainingBeforeExec.lessThanOrEqualTo(0)) return false;
         return true;
       })
       .map((item) => ({
         id: item.id,
         mainItem: item.mainItem,
         subItem: item.subItem,
-        remainingBudget: item.remainingBudget.toNumber(),
+        remainingBeforeExec: item.remainingBeforeExec.toNumber(),
         executionRate: item.executionRate,
-        canCoverShortage: item.remainingBudget.greaterThanOrEqualTo(shortage),
+        canCoverShortage: item.remainingBeforeExec.greaterThanOrEqualTo(shortage),
       }))
       .sort((a, b) => {
         // 집행률이 낮은 항목 우선
@@ -646,7 +655,7 @@ export class AnalyticsService {
         if (remainingShortage.lessThanOrEqualTo(0)) break;
 
         const transferAmount = Decimal.min(
-          new Decimal(candidate.remainingBudget),
+          new Decimal(candidate.remainingBeforeExec),
           remainingShortage
         );
 
@@ -654,7 +663,7 @@ export class AnalyticsService {
           sourceItemId: candidate.id,
           sourceItem: `${candidate.mainItem}${candidate.subItem ? ' - ' + candidate.subItem : ''}`,
           amount: transferAmount.toNumber(),
-          transferType: transferAmount.equals(candidate.remainingBudget) ? 'FULL' : 'PARTIAL',
+          transferType: transferAmount.equals(candidate.remainingBeforeExec) ? 'FULL' : 'PARTIAL',
         });
 
         remainingShortage = remainingShortage.minus(transferAmount);
@@ -676,7 +685,9 @@ export class AnalyticsService {
         mainItem: budgetItem.mainItem,
         subItem: budgetItem.subItem,
         currentBudget: budgetItem.currentBudget.toNumber(),
-        remainingBudget: budgetItem.remainingBudget.toNumber(),
+        remainingBeforeExec: budgetItem.remainingBeforeExec.toNumber(),
+        remainingAfterExec: budgetItem.remainingAfterExec.toNumber(),
+        pendingExecutionAmount: budgetItem.pendingExecutionAmount.toNumber(),
         executionRate: budgetItem.executionRate,
       },
       requestAmount: amount.toNumber(),

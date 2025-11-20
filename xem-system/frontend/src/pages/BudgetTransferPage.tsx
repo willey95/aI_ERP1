@@ -1,16 +1,34 @@
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import api from '@/lib/api';
 import { budgetTransferService } from '@/services/budgetTransferService';
 import { formatCurrency, formatDate } from '@/lib/utils';
 import type { Project } from '@/types';
+import { useProjectStore } from '@/stores/projectStore';
 
 export default function BudgetTransferPage() {
-  const [selectedProjectId, setSelectedProjectId] = useState<string>('');
+  const globalSelectedProjectId = useProjectStore((state) => state.selectedProjectId);
+  const setGlobalSelectedProjectId = useProjectStore((state) => state.setSelectedProjectId);
+
+  // Initialize from global store or default to empty string
+  const [selectedProjectId, setSelectedProjectId] = useState<string>(globalSelectedProjectId || '');
   const [statusFilter, setStatusFilter] = useState<string>('');
   const [selectedTransfer, setSelectedTransfer] = useState<any>(null);
 
   const queryClient = useQueryClient();
+
+  // Sync with global store on mount and when global changes
+  useEffect(() => {
+    if (globalSelectedProjectId && globalSelectedProjectId !== selectedProjectId) {
+      setSelectedProjectId(globalSelectedProjectId);
+    }
+  }, [globalSelectedProjectId]);
+
+  // Update global store when local selection changes
+  const handleProjectChange = (projectId: string) => {
+    setSelectedProjectId(projectId);
+    setGlobalSelectedProjectId(projectId);
+  };
 
   // Fetch projects
   const { data: projectsData } = useQuery({
@@ -88,15 +106,16 @@ export default function BudgetTransferPage() {
       <div className="bg-white rounded-lg shadow p-6 mb-6">
         <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
           <div>
-            <label className="block text-sm font-medium text-gray-700 mb-2">
-              Project
+            <label className="block text-sm font-semibold text-ink-7 mb-2">
+              프로젝트 선택
             </label>
             <select
               value={selectedProjectId}
-              onChange={(e) => setSelectedProjectId(e.target.value)}
-              className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
+              onChange={(e) => handleProjectChange(e.target.value)}
+              className="w-96 px-4 py-2.5 text-sm border-2 border-ink-4 rounded-lg focus:outline-none focus:ring-2 focus:ring-ink-7 bg-ink-0"
+              style={{ minHeight: '42px' }}
             >
-              <option value="">-- Select Project --</option>
+              <option value="">-- 프로젝트를 선택하세요 --</option>
               {projects.map((project) => (
                 <option key={project.id} value={project.id}>
                   {project.code} - {project.name}

@@ -164,12 +164,32 @@ export interface FinancialModelSummary {
 export interface CashFlowItem {
   id: string;
   projectId: string;
+  budgetItemId?: string;
   type: 'INFLOW' | 'OUTFLOW';
   category: string;
-  description: string;
-  plannedAmount: number;
-  actualAmount: number;
+  mainItem: string;
+  subItem?: string;
+  description?: string;
+
+  // Amounts
+  budgetAmount: string | number;
+  forecastAmount: string | number;
+  actualAmount: string | number;
+
+  // Budget vs Forecast Variance
+  varianceAmount: string | number;
+  varianceReason?: string;
+  isVarianceApproved: boolean;
+
+  // Actual vs Nominal Execution
+  actualExecutionType: 'ACTUAL' | 'NOMINAL' | 'SPLIT';
+  actualExecutionAmount: string | number;
+  nominalExecutionAmount: string | number;
+  executionNote?: string;
+
+  // Dates
   plannedDate: string;
+  forecastDate?: string;
   actualDate?: string;
   isRecurring: boolean;
   recurringMonths?: number;

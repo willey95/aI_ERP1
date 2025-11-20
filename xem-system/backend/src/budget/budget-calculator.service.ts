@@ -121,12 +121,14 @@ export class BudgetCalculatorService {
         const calculatedAmount = new Decimal(result);
 
         // Update budget item
+        const newRemainingBeforeExec = calculatedAmount.minus(item.executedAmount);
         await this.prisma.budgetItem.update({
           where: { id: item.id },
           data: {
             calculatedAmount,
             currentBudget: calculatedAmount,
-            remainingBudget: calculatedAmount.minus(item.executedAmount),
+            remainingBeforeExec: newRemainingBeforeExec,
+            remainingAfterExec: newRemainingBeforeExec.minus(item.pendingExecutionAmount),
           },
         });
 
@@ -251,8 +253,16 @@ export class BudgetCalculatorService {
             (sum, item) => sum.add(item.executedAmount),
             new Decimal(0),
           ),
-          remainingBudget: grouped[category].reduce(
-            (sum, item) => sum.add(item.remainingBudget),
+          remainingBeforeExec: grouped[category].reduce(
+            (sum, item) => sum.add(item.remainingBeforeExec),
+            new Decimal(0),
+          ),
+          remainingAfterExec: grouped[category].reduce(
+            (sum, item) => sum.add(item.remainingAfterExec),
+            new Decimal(0),
+          ),
+          pendingExecutionAmount: grouped[category].reduce(
+            (sum, item) => sum.add(item.pendingExecutionAmount),
             new Decimal(0),
           ),
         },
@@ -279,7 +289,10 @@ export class BudgetCalculatorService {
         subItem: data.subItem,
         initialBudget: amount,
         currentBudget: amount,
-        remainingBudget: amount,
+        executedAmount: new Decimal(0),
+        remainingBeforeExec: amount,
+        remainingAfterExec: amount,
+        pendingExecutionAmount: new Decimal(0),
         isCalculable: data.isCalculable || false,
         formulaId: data.formulaId,
       },
@@ -346,7 +359,9 @@ export class BudgetCalculatorService {
         currentBudget: true,
         calculatedAmount: true,
         executedAmount: true,
-        remainingBudget: true,
+        remainingBeforeExec: true,
+        remainingAfterExec: true,
+        pendingExecutionAmount: true,
         executionRate: true,
       },
     });
@@ -366,7 +381,9 @@ export class BudgetCalculatorService {
         initialBudget: items.reduce((sum, item) => sum.add(item.initialBudget), new Decimal(0)),
         currentBudget: items.reduce((sum, item) => sum.add(item.currentBudget), new Decimal(0)),
         executedAmount: items.reduce((sum, item) => sum.add(item.executedAmount), new Decimal(0)),
-        remainingBudget: items.reduce((sum, item) => sum.add(item.remainingBudget), new Decimal(0)),
+        remainingBeforeExec: items.reduce((sum, item) => sum.add(item.remainingBeforeExec), new Decimal(0)),
+        remainingAfterExec: items.reduce((sum, item) => sum.add(item.remainingAfterExec), new Decimal(0)),
+        pendingExecutionAmount: items.reduce((sum, item) => sum.add(item.pendingExecutionAmount), new Decimal(0)),
       },
     };
   }
@@ -430,7 +447,10 @@ export class BudgetCalculatorService {
           subItem: item.subItem,
           initialBudget: new Decimal(item.initialBudget || 0),
           currentBudget: new Decimal(item.currentBudget || 0),
-          remainingBudget: new Decimal(item.remainingBudget || 0),
+          executedAmount: new Decimal(0),
+          remainingBeforeExec: new Decimal(item.currentBudget || 0),
+          remainingAfterExec: new Decimal(item.currentBudget || 0),
+          pendingExecutionAmount: new Decimal(0),
           isCalculable: item.isCalculable || false,
           formulaId: item.formulaId,
           displayOrder: item.displayOrder || 0,

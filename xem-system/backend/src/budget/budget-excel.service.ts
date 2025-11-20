@@ -44,7 +44,9 @@ export class BudgetExcelService {
       { header: '세부항목', key: 'subItem', width: 30 },
       { header: '예산액 (원)', key: 'currentBudget', width: 20 },
       { header: '집행액 (원)', key: 'executedAmount', width: 20 },
-      { header: '잔액 (원)', key: 'remainingBudget', width: 20 },
+      { header: '잔액 집행전 (원)', key: 'remainingBeforeExec', width: 20 },
+      { header: '잔액 집행후 (원)', key: 'remainingAfterExec', width: 20 },
+      { header: '집행 예정액 (원)', key: 'pendingExecutionAmount', width: 20 },
       { header: '집행률 (%)', key: 'executionRate', width: 15 },
     ];
 
@@ -62,7 +64,9 @@ export class BudgetExcelService {
     budgetItems.forEach((item) => {
       const currentBudget = this.decimalToNumber(item.currentBudget);
       const executedAmount = this.decimalToNumber(item.executedAmount);
-      const remainingBudget = this.decimalToNumber(item.remainingBudget);
+      const remainingBeforeExec = this.decimalToNumber(item.remainingBeforeExec);
+      const remainingAfterExec = this.decimalToNumber(item.remainingAfterExec);
+      const pendingExecutionAmount = this.decimalToNumber(item.pendingExecutionAmount);
       const executionRate = this.decimalToNumber(item.executionRate);
 
       worksheet.addRow({
@@ -71,21 +75,23 @@ export class BudgetExcelService {
         subItem: item.subItem,
         currentBudget,
         executedAmount,
-        remainingBudget,
+        remainingBeforeExec,
+        remainingAfterExec,
+        pendingExecutionAmount,
         executionRate,
       });
     });
 
     // Format number columns
-    const numberColumns = ['D', 'E', 'F']; // currentBudget, executedAmount, remainingBudget
+    const numberColumns = ['D', 'E', 'F', 'G', 'H']; // currentBudget, executedAmount, remainingBeforeExec, remainingAfterExec, pendingExecutionAmount
     numberColumns.forEach((col) => {
       worksheet.getColumn(col).numFmt = '#,##0';
       worksheet.getColumn(col).alignment = { horizontal: 'right' };
     });
 
     // Format percentage column
-    worksheet.getColumn('G').numFmt = '0.00';
-    worksheet.getColumn('G').alignment = { horizontal: 'right' };
+    worksheet.getColumn('I').numFmt = '0.00';
+    worksheet.getColumn('I').alignment = { horizontal: 'right' };
 
     // Add borders to all cells
     worksheet.eachRow((row, rowNumber) => {
@@ -107,7 +113,9 @@ export class BudgetExcelService {
     summaryRow.getCell(4).value = { formula: `SUM(D2:D${worksheet.rowCount})` };
     summaryRow.getCell(5).value = { formula: `SUM(E2:E${worksheet.rowCount})` };
     summaryRow.getCell(6).value = { formula: `SUM(F2:F${worksheet.rowCount})` };
-    summaryRow.getCell(7).value = {
+    summaryRow.getCell(7).value = { formula: `SUM(G2:G${worksheet.rowCount})` };
+    summaryRow.getCell(8).value = { formula: `SUM(H2:H${worksheet.rowCount})` };
+    summaryRow.getCell(9).value = {
       formula: `IF(D${summaryRowNum}=0,0,E${summaryRowNum}/D${summaryRowNum}*100)`,
     };
     summaryRow.fill = {
@@ -292,7 +300,9 @@ export class BudgetExcelService {
               ...item,
               initialBudget: item.currentBudget,
               executedAmount: 0,
-              remainingBudget: item.currentBudget,
+              remainingBeforeExec: item.currentBudget,
+              remainingAfterExec: item.currentBudget,
+              pendingExecutionAmount: 0,
               executionRate: 0,
               isActive: true,
             },

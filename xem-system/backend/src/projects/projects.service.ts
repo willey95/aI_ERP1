@@ -171,7 +171,9 @@ export class ProjectsService {
       _sum: {
         currentBudget: true,
         executedAmount: true,
-        remainingBudget: true,
+        remainingBeforeExec: true,
+        remainingAfterExec: true,
+        pendingExecutionAmount: true,
       },
     });
 
@@ -254,7 +256,9 @@ export class ProjectsService {
           initialBudget: amount,
           currentBudget: amount,
           executedAmount: new Decimal(0),
-          remainingBudget: amount,
+          remainingBeforeExec: amount,
+          remainingAfterExec: amount,
+          pendingExecutionAmount: new Decimal(0),
           executionRate: 0,
           displayOrder: displayOrder++,
         },
